@@ -31,9 +31,11 @@
     box-shadow:0 0 0 0 currentColor;transition:transform .2s, box-shadow .3s}
   .mk:hover .mk-dot{transform:scale(1.3)}
   .mk.sel .mk-dot{box-shadow:0 0 0 5px rgba(255,255,255,.18),0 0 14px currentColor}
-  .mk-lbl{font-size:12px;font-weight:600;color:#fff;text-shadow:0 0 4px #000,0 0 4px #000,0 1px 3px #000;
-    opacity:0;transform:translateX(-4px);transition:opacity .25s, transform .25s;pointer-events:none}
-  body.labels-on .mk-lbl{opacity:1;transform:translateX(0)}
+  .mk-lbl{position:absolute;left:18px;top:50%;font-size:15px;font-weight:750;line-height:1.08;color:#fff;
+    letter-spacing:0;text-shadow:0 0 5px #000,0 0 8px #000,0 1px 4px #000,0 0 12px currentColor;
+    opacity:0;transform:translate(calc(var(--lbl-x,0px) - 6px),calc(-50% + var(--lbl-y,0px)));
+    transition:opacity .25s, transform .25s;pointer-events:none}
+  body.labels-on .mk-lbl{opacity:1;transform:translate(var(--lbl-x,0px),calc(-50% + var(--lbl-y,0px)))}
   .mk.qin .mk-dot{background:var(--qin);color:var(--qin)}
   .mk.south .mk-dot{background:var(--south);color:var(--south)}
   .mk.quant .mk-dot{background:var(--quant);color:var(--quant)}
@@ -568,8 +570,16 @@ addGeo(MTNS,'mtn'); addGeo(RIVS,'riv');
 
 /* ===================== scholar markers ===================== */
 const markers={};
+const LABEL_OFFSETS={
+  qinhui:[12,-18], yuhuawang:[12,10], pnas:[12,36],
+  faure:[12,-24], liu:[12,0], siu:[12,24],
+  peng:[12,-30], duara:[12,-8], lutao:[12,14], rice:[12,38],
+  scott:[12,-28], ong:[12,-6], mueggler:[12,18],
+  jing:[12,-14], zhao:[12,14]
+};
 PINS.forEach(p=>{
-  const html=`<div class="mk ${p.camp}" data-id="${p.id}"><span class="mk-dot"></span><span class="mk-lbl">${p.name}</span></div>`;
+  const [lx,ly]=LABEL_OFFSETS[p.id]||[12,0];
+  const html=`<div class="mk ${p.camp}" data-id="${p.id}" style="--lbl-x:${lx}px;--lbl-y:${ly}px"><span class="mk-dot"></span><span class="mk-lbl">${p.name}</span></div>`;
   const m=L.marker([p.lat,p.lng],{icon:L.divIcon({className:'',html,iconSize:[0,0]}),
     riseOnHover:true,title:p.name});
   m.bindTooltip(`<b>${p.name}</b><br>${p.line}`,{className:`tip ${p.camp}`,direction:'top',offset:[0,-10],opacity:1});
