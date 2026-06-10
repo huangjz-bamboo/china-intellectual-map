@@ -681,6 +681,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
     --ink:#0a0e16; --panel:#0d1320; --panel2:#10182a;
     --gold:#D8B070; --goldd:#8A6531;
     --qin:#C0433A; --south:#2C8FB0; --quant:#46A074; --adj:#CBA15E; --region:#A672B0;
+    --hist:#D17A47; --soc:#4F9D82; --pol:#6F84C7;
     --text:#ECE6D8; --dim:#9AA4AE; --faint:rgba(255,255,255,.10);
     --serif:"Songti SC","STSong","Source Han Serif SC","Noto Serif SC","SimSun",Georgia,"Times New Roman",serif;
     --sans:"PingFang SC","Hiragino Sans GB","Microsoft YaHei",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
@@ -711,6 +712,9 @@ svg.leaflet-image-layer.leaflet-interactive path {
   .mk.quant .mk-dot{background:var(--quant);color:var(--quant)}
   .mk.adj .mk-dot{background:var(--adj);color:var(--adj)}
   .mk.region .mk-dot{background:var(--region);color:var(--region)}
+  .mk.hist .mk-dot{background:var(--hist);color:var(--hist)}
+  .mk.soc .mk-dot{background:var(--soc);color:var(--soc)}
+  .mk.pol .mk-dot{background:var(--pol);color:var(--pol)}
   .mk.hidden{display:none}
 
   /* geo annotations */
@@ -733,6 +737,8 @@ svg.leaflet-image-layer.leaflet-interactive path {
   .tip.qin{border-left:3px solid var(--qin)!important} .tip.south{border-left:3px solid var(--south)!important}
   .tip.quant{border-left:3px solid var(--quant)!important} .tip.adj{border-left:3px solid var(--adj)!important}
   .tip.region{border-left:3px solid var(--region)!important}
+  .tip.hist{border-left:3px solid var(--hist)!important} .tip.soc{border-left:3px solid var(--soc)!important}
+  .tip.pol{border-left:3px solid var(--pol)!important}
 
   /* ---- top thesis bar ---- */
   #topbar{position:absolute;top:0;left:0;right:0;z-index:1000;padding:12px clamp(12px,2.5vw,22px);
@@ -943,7 +949,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
 <div id="hero">
   <div class="eyebrow">An Intellectual Cartography of China · 卫星地形版</div>
   <h1>把每一位学者,<span class="accent">钉回他们脚下的那片中国</span></h1>
-  <p class="lede">珠三角的祠堂、长安到开封的联姻网络、黄土高原的编户、Zomia 的逃逸山地、成都的茶馆、北京城南的浙江村……<b>21 位学者 / 学派</b>,沿着国家与社会、宗族与编户、农村与城市、传统与民俗五条线索,落在真实的卫星地形之上。点开顶部色片,看同一片土地如何被三种"宗族是什么"的答案重新解读。</p>
+  <p class="lede">珠三角的祠堂、长安到开封的联姻网络、黄土高原的编户、Zomia 的逃逸山地、成都的茶馆、北京城南的浙江村……<b>39 位学者 / 学派</b>,沿着国家与社会、宗族与编户、农村与城市、传统与民俗,以及历史学、社会学、政治学三条中国研究主线,落在真实的卫星地形之上。点开顶部色片,看同一片土地如何被不同学科的答案重新解读。</p>
   <div class="enter-row">
     <button class="btn" id="enterbtn">进入地图 →</button>
     <span class="hint-mini">卫星/地形可切换 · 拖动缩放 · 点击图钉看 AJS 文献</span>
@@ -959,7 +965,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
       <li><span class="k">卫星 / 地形</span> 切换底图;<span class="k">省界 / 山河</span> 叠加行政界与山脉水系注记</li>
       <li><span class="k">拖动 · 滚轮 · 双指</span> 平移缩放(谷歌地图式)</li>
       <li><span class="k">点击图钉</span> 飞向该学者的研究地,展开论点 · 方法 · 对话 · 争议 · <b>AJS 格式参考文献</b></li>
-      <li><span class="k">顶部色片</span> 按"宗族是什么 / 邻近理论 / 区域民族志"筛选学者</li>
+      <li><span class="k">顶部色片</span> 按"宗族是什么 / 邻近理论 / 区域民族志 / 历史学 / 社会学 / 政治学"筛选学者</li>
       <li><span class="k">⏳ 时间轴</span> 沿 周秦之变 → 唐宋变革 → 嘉靖大礼议 → 改革开放,点亮各节点对应的学者</li>
       <li><span class="k">文献链接</span> 卡片底部每条参考文献可点击,标 <span class="k">DOI</span> 的直达期刊,标"出版社/书目"的跳出版社页</li>
     </ul>
@@ -978,6 +984,9 @@ const CAMPS = {
   quant: {label:'反噬国家 · 英文量化派', color:'#46A074', q:'宗族强到能反噬国家——宋以后是「强社会·弱国家」,量化数据反复确认其韧性与边界。'},
   adj:   {label:'邻近理论',           color:'#CBA15E', q:'相邻的对话者:个体化、远程治理、社会流动——为这场争论提供机制与当代延长线。'},
   region:{label:'区域民族志',          color:'#A672B0', q:'走出华南,沿农村·城市·传统·民俗,把同一套"国家—地方"追问铺满全中国。'},
+  hist:  {label:'历史学核心',          color:'#D17A47', q:'从帝国制度、商业化、地方社会、世界经济位置到现代国家形成,构成中国研究的历史学主干。'},
+  soc:   {label:'社会学核心',          color:'#4F9D82', q:'从乡土社会、单位制、分层流动、城市化、市场转型到日常生活,构成中国社会学的核心问题群。'},
+  pol:   {label:'政治学核心',          color:'#6F84C7', q:'从国家能力、威权韧性、政策过程、抗争政治到媒体治理,构成中国政治学研究的核心谱系。'},
 };
 
 /* ===================== motifs (inline SVG, tinted by accent) ===================== */
@@ -998,7 +1007,7 @@ function motif(id){
   return `<svg viewBox="0 0 80 76" xmlns="http://www.w3.org/2000/svg" style="color:#fff">${M[id]||M.roofline}</svg>`;
 }
 
-/* ===================== scholars (21) ===================== */
+/* ===================== scholars / literature nodes ===================== */
 const PINS = [
  /* ---- 秦晖 ---- */
  {id:'qinhui',era:'zhouqin',camp:'qin',name:'秦晖',en:'Qin Hui',years:'《传统十论》· 大共同体本位',
@@ -1193,6 +1202,177 @@ const PINS = [
   dialogue:'把华南学派的取向"北伐"到山西华北,回应"华南经验能否推广";与陈春声、刘志伟共享"礼仪—地域社会"的问题意识。',
   controversy:'华南模式移植北方时,宗族弱、信仰组织强的差异如何处理,仍在探索。',
   refs:[{c:'赵世瑜. 2002. <i>狂欢与日常:明清以来的庙会与民间社会</i>. 北京:生活\u00b7读书\u00b7新知三联书店.',u:'https://search.worldcat.org/search?q=狂欢与日常+赵世瑜'}]},
+
+ /* ---- 历史学核心 ---- */
+ {id:'fairbank',era:'reform',camp:'hist',name:'费正清',en:'John K. Fairbank',years:'The United States and China · 冲击回应',
+  lat:39.90,lng:116.40,zoom:6,acc:'#D17A47',locale:'北京 · 清帝国与近代外交',motif:'scroll',
+  line:'把近代中国放入中西关系与条约体系中理解。',
+  thesis:'费正清把近代中国研究组织成一套围绕帝国秩序、朝贡体系、西方冲击与制度回应的解释框架。无论后来学界如何批评"冲击—回应"过于外部中心,他的工作都奠定了英语世界中国近代史研究的问题意识、资料体系与课程结构。',
+  method:'外交史、制度史与区域档案结合;以中外关系重新组织近代中国叙事。',
+  dialogue:'与柯文、孔飞力、彭慕兰等后续研究构成代际对话:从外部冲击转向内部社会、地方档案与全球比较。',
+  controversy:'"西方冲击"是否遮蔽了中国内部动力,是围绕费正清传统最持久的争论。',
+  refs:[{c:'Fairbank, John K. 1948. <i>The United States and China</i>. Cambridge, MA: Harvard University Press.',u:'https://search.worldcat.org/search?q=John+K.+Fairbank+The+United+States+and+China'},
+        {c:'Fairbank, John K. 1953. <i>Trade and Diplomacy on the China Coast: The Opening of the Treaty Ports, 1842-1854</i>. Cambridge, MA: Harvard University Press.',u:'https://search.worldcat.org/search?q=Trade+and+Diplomacy+on+the+China+Coast+Fairbank'}]},
+
+ {id:'skinner',era:'tangsong',camp:'hist',name:'施坚雅',en:'G. William Skinner',years:'Marketing and Social Structure · 宏观区域',
+  lat:30.66,lng:104.07,zoom:6,acc:'#C26F3E',locale:'四川 · 成都平原与宏观区域',motif:'network',
+  line:'市场体系、城市等级与宏观区域重画中国社会空间。',
+  thesis:'施坚雅把中国社会从行政区划中解放出来,以基层市场、中心地、交通网络和区域系统解释地方社会如何被组织。他的"宏观区域"模型让中国研究者看到:省界并不等于社会经济边界,市场层级常常比行政层级更能说明人口、商业和文化的流动。',
+  method:'区域系统模型、市场层级分析、历史地理与社会科学建模。',
+  dialogue:'与华南学派的地方社会研究互补:一个强调区域市场结构,一个强调礼仪、宗族与国家正统如何进入地方。',
+  controversy:'模型的整齐性与地方复杂经验之间存在张力,但仍是中国历史社会科学的底层框架之一。',
+  refs:[{c:'Skinner, G. William. 1964-1965. "Marketing and Social Structure in Rural China." <i>Journal of Asian Studies</i> 24-25.',u:'https://search.worldcat.org/search?q=Skinner+Marketing+and+Social+Structure+in+Rural+China'},
+        {c:'Skinner, G. William, ed. 1977. <i>The City in Late Imperial China</i>. Stanford, CA: Stanford University Press.',u:'https://search.worldcat.org/search?q=The+City+in+Late+Imperial+China+Skinner'}]},
+
+ {id:'kuhn',era:'jiajing',camp:'hist',name:'孔飞力',en:'Philip A. Kuhn',years:'Soulstealers · 地方恐慌与国家权力',
+  lat:31.30,lng:120.60,zoom:6,acc:'#A95B39',locale:'江南 · 清代地方社会',motif:'scroll',
+  line:'从叫魂案看清帝国如何处理恐慌、官僚与民间社会。',
+  thesis:'孔飞力通过"叫魂"恐慌揭示清代国家机器的实际运行:皇帝、官僚、地方社会与流言网络彼此缠绕。宏观帝国不是抽象制度,而是在案件、恐惧、文书与问责中被一层层发动起来。',
+  method:'档案细读、事件史与国家权力的微观机制分析。',
+  dialogue:'回应费正清传统之外的内部动力问题;与社会史、法律史和历史人类学共同推进"从案件看制度"的写法。',
+  controversy:'个案能否代表帝国治理常态,是事件史方法常见的争议。',
+  refs:[{c:'Kuhn, Philip A. 1990. <i>Soulstealers: The Chinese Sorcery Scare of 1768</i>. Cambridge, MA: Harvard University Press.',u:'https://search.worldcat.org/search?q=Soulstealers+Philip+A.+Kuhn'},
+        {c:'Kuhn, Philip A. 1970. <i>Rebellion and Its Enemies in Late Imperial China</i>. Cambridge, MA: Harvard University Press.',u:'https://search.worldcat.org/search?q=Rebellion+and+Its+Enemies+in+Late+Imperial+China+Kuhn'}]},
+
+ {id:'pomeranz',era:'tangsong',camp:'hist',name:'彭慕兰',en:'Kenneth Pomeranz',years:'The Great Divergence · 大分流',
+  lat:31.23,lng:121.47,zoom:6,acc:'#D17A47',locale:'长江下游 · 江南与世界经济',motif:'water',
+  line:'江南与英格兰曾同样接近工业化门槛,差别来自煤与殖民地。',
+  thesis:'彭慕兰把江南放进全球经济比较,挑战"欧洲早胜"的目的论叙事。他强调十八世纪江南与英格兰在生活水平、市场化和生态压力上有可比性,真正拉开差距的是煤炭、殖民地资源和全球生态转移。',
+  method:'全球史、经济史、生态约束与跨区域比较。',
+  dialogue:'与王国斌、黄宗智、李中清等围绕市场、人口、国家与发展道路展开大分流争论。',
+  controversy:'江南和英格兰的可比性、工资与生活水平数据、殖民地因素权重,一直是争论焦点。',
+  refs:[{c:'Pomeranz, Kenneth. 2000. <i>The Great Divergence: China, Europe, and the Making of the Modern World Economy</i>. Princeton, NJ: Princeton University Press.',u:'https://press.princeton.edu/books/paperback/9780691090108/the-great-divergence'}]},
+
+ {id:'rbwong',era:'tangsong',camp:'hist',name:'王国斌',en:'R. Bin Wong',years:'China Transformed · 比较国家形成',
+  lat:32.06,lng:118.79,zoom:6,acc:'#B97542',locale:'江淮 · 国家能力与财政治理',motif:'network',
+  line:'中国与欧洲不是单线落后/先进,而是不同国家形成路径。',
+  thesis:'王国斌把中国和欧洲放在同一比较框架中,强调国家能力、财政制度、市场整合和社会秩序各有不同组合。中国不是欧洲道路的失败版本,而是另一种大规模政治经济秩序。',
+  method:'比较历史社会科学;国家形成、财政与市场整合比较。',
+  dialogue:'与彭慕兰的大分流、施坚雅的区域系统、费正清传统共同构成英语世界中国历史研究的宏观比较谱系。',
+  controversy:'比较史如何避免把复杂地区压缩成"中国/欧洲"两大单位,仍需不断校正。',
+  refs:[{c:'Wong, R. Bin. 1997. <i>China Transformed: Historical Change and the Limits of European Experience</i>. Ithaca, NY: Cornell University Press.',u:'https://search.worldcat.org/search?q=R.+Bin+Wong+China+Transformed'}]},
+
+ {id:'elvin',era:'tangsong',camp:'hist',name:'伊懋可',en:'Mark Elvin',years:'The Pattern of the Chinese Past · 高水平陷阱',
+  lat:30.25,lng:120.16,zoom:6,acc:'#C88950',locale:'江南 · 技术、生态与经济史',motif:'field',
+  line:'早熟的市场与技术体系可能形成"高水平均衡陷阱"。',
+  thesis:'伊懋可用"高水平均衡陷阱"解释中国为何长期保持高度复杂的农业、市场与技术体系,却未走向工业资本主义突破。他的问题设置推动了中国经济史从王朝叙事转向技术、资源、人口与市场的长期结构。',
+  method:'长时段经济史、技术史与生态史综合解释。',
+  dialogue:'与彭慕兰的大分流形成前后相继的争论:瓶颈究竟在内部均衡,还是在全球资源与殖民扩张。',
+  controversy:'"陷阱"概念是否过度目的论,是后来全球史和生态史修正的重点。',
+  refs:[{c:'Elvin, Mark. 1973. <i>The Pattern of the Chinese Past</i>. Stanford, CA: Stanford University Press.',u:'https://search.worldcat.org/search?q=Mark+Elvin+The+Pattern+of+the+Chinese+Past'}]},
+
+ /* ---- 社会学核心 ---- */
+ {id:'feixiaotong',era:'reform',camp:'soc',name:'费孝通',en:'Fei Xiaotong',years:'乡土中国 · 差序格局',
+  lat:31.16,lng:120.65,zoom:7,acc:'#4F9D82',locale:'江苏 · 江村与乡土社会',motif:'field',
+  line:'差序格局、乡土本色与基层社会结构的经典概括。',
+  thesis:'费孝通从江村田野出发,把中国基层社会概括为以熟人关系、礼治秩序和差序格局组织起来的乡土社会。无论后来城市化和市场化如何改变社会结构,"差序格局"仍是讨论关系、亲缘、信任与公共性的基本语汇。',
+  method:'社区研究、参与观察、社会人类学与本土社会学概念建构。',
+  dialogue:'与华南学派、阎云翔、项飙等田野研究共享"从地方理解中国"的取向。',
+  controversy:'乡土中国是否被过度经典化,以及它如何适用于流动、城市与平台社会,是当代延展问题。',
+  refs:[{c:'Fei, Hsiao-tung. 1939. <i>Peasant Life in China: A Field Study of Country Life in the Yangtze Valley</i>. London: Routledge.',u:'https://search.worldcat.org/search?q=Peasant+Life+in+China+Fei+Hsiao-tung'},
+        {c:'费孝通. 1948. <i>乡土中国</i>. 上海:观察社.',u:'https://search.worldcat.org/search?q=乡土中国+费孝通'}]},
+
+ {id:'walder',era:'reform',camp:'soc',name:'华尔德',en:'Andrew G. Walder',years:'Communist Neo-Traditionalism · 单位制',
+  lat:39.12,lng:117.20,zoom:7,acc:'#3F8F76',locale:'天津 · 工厂与单位社会',motif:'network',
+  line:'单位制中的依附、庇护与组织化不平等。',
+  thesis:'华尔德把中国城市工厂看作一种"共产主义新传统主义"组织:国家社会主义并未消灭庇护关系,而是通过单位、干部、福利和政治忠诚重组了依附结构。它解释了改革前城市社会的权力、利益和日常服从机制。',
+  method:'组织社会学、工厂访谈、社会主义单位制分析。',
+  dialogue:'与边燕杰、谢宇、戴慕珍等社会分层与市场转型研究相连,共同追问社会主义制度遗产如何塑造改革时代。',
+  controversy:'单位经验如何推广到不同城市、行业与后单位时代,需要分时期处理。',
+  refs:[{c:'Walder, Andrew G. 1986. <i>Communist Neo-Traditionalism: Work and Authority in Chinese Industry</i>. Berkeley: University of California Press.',u:'https://search.worldcat.org/search?q=Communist+Neo-Traditionalism+Andrew+Walder'}]},
+
+ {id:'xieyu',era:'reform',camp:'soc',name:'谢宇',en:'Yu Xie',years:'Social Stratification · 家庭、流动与不平等',
+  lat:39.90,lng:116.40,zoom:5,acc:'#4F9D82',locale:'全国 · 家庭调查与社会分层',motif:'network',
+  line:'用大规模调查测量中国家庭、教育、流动与不平等。',
+  thesis:'谢宇推动以严格抽样调查和量化模型研究中国社会分层、代际流动、教育机会、婚姻家庭和城乡差异。中国研究中的"社会结构"因此从印象式判断转向可检验的微观数据。',
+  method:'人口学、社会分层量化模型、大规模家庭调查。',
+  dialogue:'与英文量化派共同强调数据和因果识别,但议题从宗族扩展到家庭、教育、劳动市场与阶层结构。',
+  controversy:'调查数据如何覆盖流动人口、非正规就业与快速制度变迁,是持续的方法挑战。',
+  refs:[{c:'Xie, Yu, and Xiang Zhou. 2014. "Income Inequality in Today\'s China." <i>Proceedings of the National Academy of Sciences</i> 111(19):6928-6933.',u:'https://doi.org/10.1073/pnas.1403158111'},
+        {c:'Xie, Yu, and Yongai Jin. 2015. "Household Wealth in China." <i>Chinese Sociological Review</i> 47(3):203-229.',u:'https://doi.org/10.1080/21620555.2015.1032158'}]},
+
+ {id:'solinger',era:'reform',camp:'soc',name:'索林格',en:'Dorothy J. Solinger',years:'Contesting Citizenship · 城市贫困与户籍',
+  lat:30.59,lng:114.31,zoom:7,acc:'#5BAA8D',locale:'湖北 · 武汉与城市下岗',motif:'roofline',
+  line:'市场改革中的城市贫困、户籍边界与公民身份。',
+  thesis:'索林格把改革时代的下岗、城市贫困、迁移人口和户籍制度放在"公民身份"框架下讨论:谁被承认为城市成员,谁只能作为劳动力进入城市,决定了福利、尊严与政治表达的边界。',
+  method:'政治社会学、城市访谈、制度分析。',
+  dialogue:'与项飙的浙江村、戴慕珍的消费社会、华尔德的单位制研究衔接,说明市场化如何重写城市成员资格。',
+  controversy:'户籍制度在不同城市与时期的松动程度不同,需要防止把单一城市经验泛化。',
+  refs:[{c:'Solinger, Dorothy J. 1999. <i>Contesting Citizenship in Urban China: Peasant Migrants, the State, and the Logic of the Market</i>. Berkeley: University of California Press.',u:'https://search.worldcat.org/search?q=Contesting+Citizenship+in+Urban+China+Solinger'}]},
+
+ {id:'ddavis',era:'reform',camp:'soc',name:'戴慕珍',en:'Deborah S. Davis',years:'The Consumer Revolution · 城市家庭',
+  lat:31.23,lng:121.47,zoom:7,acc:'#4F9D82',locale:'上海 · 消费、家庭与中产生活',motif:'roofline',
+  line:'从消费、住房与家庭生活看改革开放后的城市社会。',
+  thesis:'戴慕珍把改革后的城市家庭、住房、消费和阶层生活作为理解中国社会转型的窗口。她的研究说明市场并不是抽象制度,而是进入客厅、商场、婚姻、住房和代际关系的日常实践。',
+  method:'城市社会学、家庭研究、消费社会研究。',
+  dialogue:'与索林格的城市成员资格、项飙的移民社会、谢宇的分层研究一起构成改革时代社会学谱系。',
+  controversy:'消费是否意味着自主性增加,还是新的不平等和债务压力,需要结合阶层分化分析。',
+  refs:[{c:'Davis, Deborah S., ed. 2000. <i>The Consumer Revolution in Urban China</i>. Berkeley: University of California Press.',u:'https://search.worldcat.org/search?q=The+Consumer+Revolution+in+Urban+China+Deborah+Davis'}]},
+
+ {id:'whyte',era:'reform',camp:'soc',name:'怀默霆',en:'Martin King Whyte',years:'Myth of the Social Volcano · 不平等态度',
+  lat:39.90,lng:116.40,zoom:5,acc:'#67B595',locale:'全国 · 不平等认知与社会稳定',motif:'network',
+  line:'中国社会不平等很高,但公众态度并不自动转化为火山式爆发。',
+  thesis:'怀默霆通过调查研究说明,中国居民对不平等的感受并不简单等同于对体制的否定。许多人会用努力、机会、腐败、区域差异等不同框架解释分配结果,这使"社会火山"式预测显得过于粗糙。',
+  method:'问卷调查、比较社会分层、态度研究。',
+  dialogue:'与谢宇的分层测量、政治学的稳定性研究相连,把客观不平等和主观合法性放在一起看。',
+  controversy:'态度调查能否捕捉沉默、恐惧和表达限制,仍需与质性研究互补。',
+  refs:[{c:'Whyte, Martin King. 2010. <i>Myth of the Social Volcano: Perceptions of Inequality and Distributive Injustice in Contemporary China</i>. Stanford, CA: Stanford University Press.',u:'https://search.worldcat.org/search?q=Myth+of+the+Social+Volcano+Whyte'}]},
+
+ /* ---- 政治学核心 ---- */
+ {id:'pye',era:'reform',camp:'pol',name:'白鲁恂',en:'Lucian W. Pye',years:'The Spirit of Chinese Politics · 政治文化',
+  lat:39.90,lng:116.40,zoom:5,acc:'#6F84C7',locale:'北京 · 政治文化与权威',motif:'scroll',
+  line:'从政治文化与权威心理理解中国政治。',
+  thesis:'白鲁恂把中国政治解释为一种围绕权威、关系、面子、情感与组织纪律展开的政治文化结构。他的问题意识影响了早期英语世界政治学中国研究,也成为后来制度主义、理性选择和比较威权研究不断修正的对象。',
+  method:'政治文化分析、比较政治与心理文化解释。',
+  dialogue:'与黎安友、裴敏欣等后来的制度主义和威权韧性研究形成方法代际差异。',
+  controversy:'政治文化解释容易本质化"中国性",后来研究更多转向制度激励、组织结构和政策过程。',
+  refs:[{c:'Pye, Lucian W. 1968. <i>The Spirit of Chinese Politics</i>. Cambridge, MA: MIT Press.',u:'https://search.worldcat.org/search?q=Lucian+Pye+The+Spirit+of+Chinese+Politics'}]},
+
+ {id:'nathan',era:'reform',camp:'pol',name:'黎安友',en:'Andrew J. Nathan',years:'Authoritarian Resilience · 威权韧性',
+  lat:39.90,lng:116.40,zoom:5,acc:'#647AC0',locale:'北京 · 威权制度与政治稳定',motif:'network',
+  line:'中国威权体制不是单纯僵化,而有制度化适应能力。',
+  thesis:'黎安友提出"威权韧性"问题,把中国政治从崩溃预测中拉回制度分析:干部任期、精英更替、政策反馈和有限制度化,使政权能够在压力下调整。这个命题成为二十一世纪中国政治学的核心争论之一。',
+  method:'比较威权、制度分析、精英政治研究。',
+  dialogue:'与裴敏欣的腐败与国家能力、协商威权、Repnikova 的媒体治理等共同构成稳定性解释谱系。',
+  controversy:'韧性究竟是制度化适应,还是高压控制和增长条件下的阶段性结果,争论至今未止。',
+  refs:[{c:'Nathan, Andrew J. 2003. "Authoritarian Resilience." <i>Journal of Democracy</i> 14(1):6-17.',u:'https://doi.org/10.1353/jod.2003.0019'}]},
+
+ {id:'shue',era:'reform',camp:'pol',name:'舒耕德',en:'Vivienne Shue',years:'The Reach of the State · 国家触达',
+  lat:34.75,lng:113.62,zoom:6,acc:'#7F90CC',locale:'华北中原 · 基层国家能力',motif:'field',
+  line:'国家权力触达乡村,但并非无缝覆盖基层社会。',
+  thesis:'舒耕德研究国家如何进入乡村社会,强调基层国家权力既有渗透能力,也受地方网络、财政资源、干部执行和社会惯例制约。她把"国家能力"从中央意志拆解为基层触达与地方互动。',
+  method:'政治社会学、乡村治理、国家能力分析。',
+  dialogue:'与秦晖的大共同体、杜赞奇的权力文化网络、欧博文/李连江的依法抗争形成乡村国家研究链条。',
+  controversy:'改革后国家能力增强还是碎片化,取决于税费、项目制、维稳和数字治理等不同领域。',
+  refs:[{c:'Shue, Vivienne. 1988. <i>The Reach of the State: Sketches of the Chinese Body Politic</i>. Stanford, CA: Stanford University Press.',u:'https://search.worldcat.org/search?q=Vivienne+Shue+The+Reach+of+the+State'}]},
+
+ {id:'perry',era:'reform',camp:'pol',name:'裴宜理',en:'Elizabeth J. Perry',years:'Shanghai on Strike · 抗争政治',
+  lat:31.23,lng:121.47,zoom:7,acc:'#6F84C7',locale:'上海 / 安源 · 劳工与革命传统',motif:'roofline',
+  line:'抗争、工人政治与革命传统并不是现代国家之外的噪音。',
+  thesis:'裴宜理把中国政治研究带入工人、罢工、革命根据地和群众动员现场。她说明抗争并不只是制度外破坏,也能成为政党组织、革命正当性和国家治理传统的一部分。',
+  method:'历史政治学、社会运动研究、档案与地方史结合。',
+  dialogue:'与欧博文/李连江的依法抗争、杜赞奇的地方权力网络、政治学威权稳定研究构成"抗争如何被吸纳/压制/制度化"的连续问题。',
+  controversy:'革命传统是赋权资源还是治理技术,在不同历史阶段会产生相反效果。',
+  refs:[{c:'Perry, Elizabeth J. 1993. <i>Shanghai on Strike: The Politics of Chinese Labor</i>. Stanford, CA: Stanford University Press.',u:'https://search.worldcat.org/search?q=Elizabeth+Perry+Shanghai+on+Strike'},
+        {c:'Perry, Elizabeth J. 2012. <i>Anyuan: Mining China\'s Revolutionary Tradition</i>. Berkeley: University of California Press.',u:'https://search.worldcat.org/search?q=Elizabeth+Perry+Anyuan'}]},
+
+ {id:'obrienli',era:'reform',camp:'pol',name:'欧博文 / 李连江',en:'Kevin J. OBrien & Lianjiang Li',years:'Rightful Resistance · 依法抗争',
+  lat:35.86,lng:104.20,zoom:5,acc:'#8295D4',locale:'乡村中国 · 政策、抗争与合法性',motif:'field',
+  line:'农民用国家自己的政策语言向基层国家维权。',
+  thesis:'欧博文与李连江提出"依法抗争":乡村抗争者并不总是反国家,而是援引中央政策、法律和正式话语反对基层执行偏差。这一概念重新解释了威权体制中的抗争空间、合法性资源与中央—地方张力。',
+  method:'比较政治、田野访谈、抗争政治与政策执行研究。',
+  dialogue:'与舒耕德的国家触达、裴宜理的抗争传统、基层治理研究形成对话。',
+  controversy:'当维权空间收紧、数字化监控增强时,"依法抗争"的适用范围需要重新评估。',
+  refs:[{c:'O&#39;Brien, Kevin J., and Lianjiang Li. 2006. <i>Rightful Resistance in Rural China</i>. Cambridge: Cambridge University Press.',u:'https://search.worldcat.org/search?q=Rightful+Resistance+in+Rural+China+OBrien+Li'}]},
+
+ {id:'repnikova',era:'reform',camp:'pol',name:'雷普尼科娃',en:'Maria Repnikova',years:'Media Politics in China · 媒体治理',
+  lat:39.90,lng:116.40,zoom:6,acc:'#6F84C7',locale:'北京 · 媒体、宣传与协商式控制',motif:'network',
+  line:'中国媒体治理不是简单封口,而是控制、试探与协商的组合。',
+  thesis:'Repnikova 研究调查记者、宣传部门与国家之间的互动,指出中国媒体政治常以动态协商运行:记者获得有限空间,国家设置边界并随时收紧。这使媒体既可能揭露局部问题,又不必然挑战总体权威。',
+  method:'政治传播、访谈、媒体民族志与威权治理研究。',
+  dialogue:'与黎安友的威权韧性、抗争政治和数字治理研究相连,展示威权体制如何通过信息管理维持适应性。',
+  controversy:'在平台化、审查技术升级和跨国舆论环境变化后,协商空间是否缩小是新的问题。',
+  refs:[{c:'Repnikova, Maria. 2017. <i>Media Politics in China: Improvising Power under Authoritarianism</i>. Cambridge: Cambridge University Press.',u:'https://search.worldcat.org/search?q=Maria+Repnikova+Media+Politics+in+China'}]},
 ];
 
 /* ===================== geography annotations ===================== */
@@ -1245,7 +1425,11 @@ const LABEL_OFFSETS={
   faure:[12,-24], liu:[12,0], siu:[12,24],
   peng:[12,-30], duara:[12,-8], lutao:[12,14], rice:[12,38],
   scott:[12,-28], ong:[12,-6], mueggler:[12,18],
-  jing:[12,-14], zhao:[12,14]
+  jing:[12,-14], zhao:[12,14],
+  fairbank:[14,-80], pye:[14,-56], nathan:[14,-32], xieyu:[14,-8], whyte:[14,16], repnikova:[14,40], xiang:[14,64],
+  feixiaotong:[14,-36], kuhn:[14,-14], pomeranz:[14,8], perry:[14,30], ddavis:[14,52],
+  elvin:[14,-36], rbwong:[14,-14], skinner:[14,-28], walder:[14,10],
+  shue:[14,-18], solinger:[14,8], obrienli:[14,28]
 };
 PINS.forEach(p=>{
   const [lx,ly]=LABEL_OFFSETS[p.id]||[12,0];
@@ -1297,7 +1481,7 @@ function markHighlight(){
 /* ===================== panel ===================== */
 const panel=document.getElementById('panel');
 function block(h,inner){return `<div class="p-block"><div class="p-h">${h}</div>${inner}</div>`;}
-function campTitle(k){return {qin:'秦晖一脉',south:'华南学派',quant:'英文量化派',adj:'外围思想层',region:'区域民族志'}[k];}
+function campTitle(k){return {qin:'秦晖一脉',south:'华南学派',quant:'英文量化派',adj:'外围思想层',region:'区域民族志',hist:'历史学',soc:'社会学',pol:'政治学'}[k];}
 function openPanel(p){
   const c=CAMPS[p.camp];
   document.getElementById('pbanner').style.setProperty('--acc',p.acc||c.color);
