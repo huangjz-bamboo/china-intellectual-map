@@ -1,0 +1,762 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>中国国家—社会研究 · 思想地图 (卫星版)</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<style>
+  :root{
+    --ink:#0a0e16; --panel:#0d1320; --panel2:#10182a;
+    --gold:#D8B070; --goldd:#8A6531;
+    --qin:#C0433A; --south:#2C8FB0; --quant:#46A074; --adj:#CBA15E; --region:#A672B0;
+    --text:#ECE6D8; --dim:#9AA4AE; --faint:rgba(255,255,255,.10);
+    --serif:"Songti SC","STSong","Source Han Serif SC","Noto Serif SC","SimSun",Georgia,"Times New Roman",serif;
+    --sans:"PingFang SC","Hiragino Sans GB","Microsoft YaHei",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    --mono:ui-monospace,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;height:100%;overflow:hidden;background:var(--ink);color:var(--text);font-family:var(--sans)}
+  #map{position:fixed;inset:0;z-index:0;background:#070a12}
+  .leaflet-container{background:#070a12;font-family:var(--sans)}
+  .leaflet-control-attribution{background:rgba(7,10,18,.7)!important;color:#8a93a0!important;font-size:10px}
+  .leaflet-control-attribution a{color:#aab4c0!important}
+  .leaflet-bar a{background:#0d1320;color:var(--text);border-bottom-color:var(--faint)}
+  .leaflet-bar a:hover{background:#1a2335}
+
+  /* ---- scholar markers ---- */
+  .mk{transform:translate(-50%,-50%);display:flex;align-items:center;gap:6px;cursor:pointer;white-space:nowrap;position:relative}
+  .mk-dot{width:13px;height:13px;border-radius:50%;border:2px solid #0a0f17;flex:none;
+    box-shadow:0 0 0 0 currentColor;transition:transform .2s, box-shadow .3s}
+  .mk:hover .mk-dot{transform:scale(1.3)}
+  .mk.sel .mk-dot{box-shadow:0 0 0 5px rgba(255,255,255,.18),0 0 14px currentColor}
+  .mk-lbl{font-size:12px;font-weight:600;color:#fff;text-shadow:0 0 4px #000,0 0 4px #000,0 1px 3px #000;
+    opacity:0;transform:translateX(-4px);transition:opacity .25s, transform .25s;pointer-events:none}
+  body.labels-on .mk-lbl{opacity:1;transform:translateX(0)}
+  .mk.qin .mk-dot{background:var(--qin);color:var(--qin)}
+  .mk.south .mk-dot{background:var(--south);color:var(--south)}
+  .mk.quant .mk-dot{background:var(--quant);color:var(--quant)}
+  .mk.adj .mk-dot{background:var(--adj);color:var(--adj)}
+  .mk.region .mk-dot{background:var(--region);color:var(--region)}
+  .mk.hidden{display:none}
+
+  /* geo annotations */
+  .geo{transform:translate(-50%,-50%);pointer-events:none;opacity:0;transition:opacity .3s;white-space:nowrap}
+  body.geo-on .geo{opacity:1}
+  .geo.mtn{font-family:var(--serif);font-size:12.5px;font-style:italic;color:#e6d2a8;
+    text-shadow:0 0 3px #000,0 1px 4px #000;letter-spacing:.05em}
+  .geo.mtn::before{content:"▲";font-style:normal;font-size:8px;margin-right:4px;color:#cdb07e;vertical-align:1px}
+  .geo.riv{font-family:var(--serif);font-size:11.5px;font-style:italic;color:#9fd2e0;text-shadow:0 0 3px #000,0 1px 4px #000}
+
+  .tip{background:rgba(10,15,26,.95)!important;border:1px solid var(--faint)!important;color:var(--text)!important;
+    border-radius:5px!important;box-shadow:0 8px 26px rgba(0,0,0,.55)!important;font-family:var(--sans);padding:8px 11px!important;max-width:230px}
+  .tip b{font-family:var(--serif);font-size:14px}
+  .tip::before{border-top-color:rgba(10,15,26,.95)!important}
+  .tip.qin{border-left:3px solid var(--qin)!important} .tip.south{border-left:3px solid var(--south)!important}
+  .tip.quant{border-left:3px solid var(--quant)!important} .tip.adj{border-left:3px solid var(--adj)!important}
+  .tip.region{border-left:3px solid var(--region)!important}
+
+  /* ---- top thesis bar ---- */
+  #topbar{position:absolute;top:0;left:0;right:0;z-index:1000;padding:12px clamp(12px,2.5vw,22px);
+    display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+    background:linear-gradient(to bottom,rgba(7,10,18,.9),rgba(7,10,18,.4) 70%,rgba(7,10,18,0));
+    transition:opacity .6s;pointer-events:none}
+  #topbar.show{pointer-events:auto}
+  #topbar .ttl{font-family:var(--serif);font-size:14.5px;color:var(--text);white-space:nowrap;line-height:1.15}
+  #topbar .ttl span{font-family:var(--mono);font-size:9.5px;color:var(--dim);letter-spacing:.18em;display:block;margin-top:2px}
+  .chips{display:flex;gap:7px;flex-wrap:wrap}
+  .chip{cursor:pointer;border:1px solid var(--faint);background:rgba(13,19,32,.7);color:var(--text);
+    padding:6px 11px 6px 9px;border-radius:30px;font-size:12px;display:flex;align-items:center;gap:6px;
+    transition:border-color .2s,background .2s;white-space:nowrap}
+  .chip .d{width:9px;height:9px;border-radius:50%;flex:none;box-shadow:0 0 7px currentColor}
+  .chip:hover{background:rgba(255,255,255,.08)}
+  .chip[aria-pressed="true"]{border-color:currentColor;background:rgba(255,255,255,.1)}
+  .chip:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+  #cap{position:absolute;top:60px;left:clamp(12px,2.5vw,22px);right:clamp(12px,2.5vw,22px);z-index:999;
+    font-family:var(--serif);font-size:13.5px;opacity:0;transition:opacity .3s;pointer-events:none;max-width:46em;
+    text-shadow:0 1px 6px #000}
+  #cap.show{opacity:.95}
+
+  /* ---- HUD ---- */
+  #hud{position:absolute;left:0;right:0;bottom:0;z-index:1000;padding:10px clamp(12px,2.5vw,22px) 30px;
+    display:flex;align-items:flex-end;justify-content:space-between;gap:12px;
+    background:linear-gradient(to top,rgba(7,10,18,.82),rgba(7,10,18,0));pointer-events:none;transition:opacity .6s}
+  #hud .grp{display:flex;gap:7px;pointer-events:auto;flex-wrap:wrap}
+  #hud .grp.r{justify-content:flex-end}
+  .ctl{cursor:pointer;border:1px solid var(--faint);background:rgba(13,19,32,.78);color:var(--text);
+    border-radius:4px;padding:8px 12px;font-size:12px;font-family:var(--sans);display:flex;align-items:center;gap:6px;
+    transition:background .2s,border-color .2s,color .2s;white-space:nowrap}
+  .ctl:hover{background:rgba(255,255,255,.09);border-color:var(--gold)}
+  .ctl:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+  .ctl[aria-pressed="true"]{border-color:var(--gold);color:var(--gold);background:rgba(216,176,112,.14)}
+  .ctl .ph{font-family:var(--mono);font-size:10px;color:var(--dim);margin-right:2px}
+  .seg{display:flex;border:1px solid var(--faint);border-radius:4px;overflow:hidden;pointer-events:auto}
+  .seg .ctl{border:none;border-radius:0}
+  .seg .ctl+.ctl{border-left:1px solid var(--faint)}
+
+  /* ---- detail panel ---- */
+  #panel{position:absolute;z-index:1100;top:0;right:0;height:100%;width:min(450px,42vw);
+    background:linear-gradient(180deg,rgba(13,19,32,.96),rgba(9,13,22,.985));
+    border-left:1px solid var(--faint);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+    transform:translateX(103%);transition:transform .5s cubic-bezier(.4,0,.2,1);overflow-y:auto}
+  #panel.open{transform:translateX(0)}
+  .p-hero{position:relative;padding:0;overflow:hidden}
+  .p-banner{height:118px;position:relative;display:flex;align-items:flex-end;
+    background:linear-gradient(135deg,var(--acc,#888),rgba(13,19,32,.2));overflow:hidden}
+  .p-banner .motif{position:absolute;right:-6px;bottom:-8px;opacity:.5}
+  .p-banner .motif svg{display:block;width:150px;height:96px}
+  .p-banner::after{content:"";position:absolute;inset:0;background:linear-gradient(to top,rgba(9,13,22,.95),rgba(9,13,22,.1))}
+  .p-locale{position:absolute;left:24px;bottom:12px;z-index:2;font-family:var(--mono);font-size:11px;
+    letter-spacing:.1em;color:#fff;text-shadow:0 1px 5px #000;opacity:.95}
+  .p-inner{padding:20px 24px 70px}
+  .p-tag{display:inline-flex;align-items:center;gap:7px;font-size:11px;font-family:var(--mono);letter-spacing:.05em;
+    padding:4px 11px;border-radius:30px;border:1px solid currentColor;margin-bottom:13px}
+  .p-tag .d{width:8px;height:8px;border-radius:50%;background:currentColor}
+  #panel h2{font-family:var(--serif);font-size:25px;font-weight:600;margin:.05em 0 .1em;line-height:1.18}
+  .p-en{font-family:var(--mono);font-size:11.5px;color:var(--dim);letter-spacing:.03em;margin-bottom:3px}
+  .p-years{font-family:var(--mono);font-size:11px;color:var(--acc,var(--gold));letter-spacing:.06em;margin-bottom:16px;filter:brightness(1.25)}
+  .p-thesis{font-family:var(--serif);font-size:16px;line-height:1.62;color:var(--text);
+    border-left:2px solid var(--acc,var(--goldd));padding-left:14px;margin:0 0 20px}
+  .p-block{margin:0 0 17px}
+  .p-h{font-family:var(--mono);font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--dim);margin:0 0 7px;
+    display:flex;align-items:center;gap:8px}
+  .p-h::after{content:"";flex:1;height:1px;background:var(--faint)}
+  .p-block p{margin:0;font-size:14px;line-height:1.65;color:#d7d2c6}
+  .p-block .en{font-family:var(--mono);color:var(--acc,var(--gold));font-size:.9em;filter:brightness(1.2)}
+  .p-refs{list-style:none;padding:0;margin:0}
+  .p-refs li{font-size:12.5px;line-height:1.5;color:#cfc9bd;padding-left:16px;text-indent:-16px;margin-bottom:9px;
+    font-family:Georgia,"Times New Roman",var(--serif);}
+  .p-refs li i{font-style:italic}
+  .p-close{position:absolute;top:12px;left:12px;z-index:5;width:32px;height:32px;border-radius:50%;
+    border:1px solid rgba(255,255,255,.25);background:rgba(0,0,0,.4);color:#fff;cursor:pointer;font-size:16px;
+    display:flex;align-items:center;justify-content:center;transition:background .2s}
+  .p-close:hover{background:rgba(0,0,0,.65)}
+  .p-close:focus-visible{outline:2px solid #fff;outline-offset:2px}
+
+  /* ---- hero ---- */
+  #hero{position:absolute;inset:0;z-index:1500;display:flex;flex-direction:column;justify-content:center;
+    padding:clamp(22px,6vw,90px);gap:16px;
+    background:radial-gradient(130% 100% at 75% 25%,rgba(10,18,34,.2),rgba(7,10,18,.82) 55%,rgba(7,10,18,.97));
+    transition:opacity .9s ease, visibility .9s}
+  #hero.gone{opacity:0;visibility:hidden}
+  .eyebrow{font-family:var(--mono);font-size:11.5px;letter-spacing:.3em;text-transform:uppercase;color:var(--gold);opacity:.92}
+  #hero h1{font-family:var(--serif);font-weight:600;margin:0;line-height:1.14;font-size:clamp(28px,6vw,64px);max-width:17em;
+    text-shadow:0 2px 30px rgba(0,0,0,.6)}
+  #hero h1 .accent{color:var(--gold)}
+  #hero .lede{max-width:35em;opacity:.88;font-size:clamp(14.5px,1.9vw,18px);line-height:1.66;font-weight:400}
+  #hero .lede b{color:var(--gold);font-weight:600}
+  .enter-row{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-top:6px}
+  .btn{font-family:var(--sans);cursor:pointer;border:1px solid var(--goldd);background:rgba(216,176,112,.12);
+    color:var(--gold);padding:13px 26px;border-radius:3px;font-size:15px;letter-spacing:.03em;
+    transition:background .2s,transform .12s,border-color .2s}
+  .btn:hover{background:rgba(216,176,112,.22);border-color:var(--gold)}
+  .btn:active{transform:translateY(1px)}
+  .btn:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
+  .hint-mini{font-family:var(--mono);font-size:11px;color:var(--dim)}
+
+  /* help */
+  #help{position:absolute;z-index:1600;inset:0;display:none;align-items:center;justify-content:center;padding:24px;background:rgba(7,10,18,.88)}
+  #help.show{display:flex}
+  .help-card{max-width:460px;background:linear-gradient(180deg,#11182a,#0c1220);border:1px solid var(--faint);
+    border-radius:6px;padding:26px 26px 22px;font-size:14px;line-height:1.7;color:#d7d2c6}
+  .help-card h3{font-family:var(--serif);font-size:20px;margin:0 0 12px;color:var(--text)}
+  .help-card .k{font-family:var(--mono);color:var(--gold);font-size:12.5px}
+  .help-card ul{margin:0 0 16px;padding-left:18px} .help-card li{margin-bottom:6px}
+  .help-card .legend{display:flex;flex-wrap:wrap;gap:10px;margin:4px 0 16px}
+  .help-card .lg{display:flex;align-items:center;gap:6px;font-size:12px}
+  .help-card .lg .d{width:10px;height:10px;border-radius:50%}
+
+  /* ---- references links ---- */
+  .p-refs li a{color:#cfc9bd;text-decoration:none;border-bottom:1px dotted rgba(216,176,112,.5);transition:color .2s,border-color .2s}
+  .p-refs li a:hover{color:var(--gold);border-bottom-color:var(--gold)}
+  .p-refs li .ext{font-family:var(--mono);font-size:9px;letter-spacing:.05em;color:var(--dim);
+    border:1px solid var(--faint);border-radius:3px;padding:1px 4px;margin-left:5px;text-indent:0;white-space:nowrap;
+    display:inline-block;vertical-align:1px}
+  .p-refs li a:hover .ext{color:var(--gold);border-color:var(--gold)}
+
+  /* ---- timeline ---- */
+  #timeline{position:absolute;left:0;right:0;bottom:74px;z-index:1000;
+    padding:0 clamp(12px,2.5vw,22px);pointer-events:none;
+    opacity:0;transform:translateY(8px);transition:opacity .4s,transform .4s}
+  #timeline.show{opacity:1;transform:translateY(0);pointer-events:auto}
+  .tl-track{position:relative;max-width:780px;margin:0 auto;height:62px}
+  .tl-line{position:absolute;left:4%;right:4%;top:18px;height:2px;background:linear-gradient(to right,
+    rgba(216,176,112,.15),rgba(216,176,112,.55),rgba(216,176,112,.15))}
+  .tl-fill{position:absolute;left:4%;top:18px;height:2px;width:0;background:var(--gold);
+    box-shadow:0 0 8px var(--gold);transition:width .6s cubic-bezier(.4,0,.2,1)}
+  .tl-node{position:absolute;top:8px;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;
+    cursor:pointer;width:0}
+  .tl-node .nub{width:13px;height:13px;border-radius:50%;background:#11182a;border:2px solid rgba(216,176,112,.5);
+    transition:all .3s;flex:none}
+  .tl-node .nub::after{content:"";position:absolute;top:3px;width:5px;height:5px;border-radius:50%;background:transparent}
+  .tl-node .yr{font-family:var(--mono);font-size:9.5px;color:var(--dim);margin-top:6px;white-space:nowrap;letter-spacing:.04em}
+  .tl-node .nm{font-family:var(--serif);font-size:12px;color:var(--text);margin-top:2px;white-space:nowrap;text-shadow:0 1px 4px #000}
+  .tl-node.active .nub{background:var(--gold);border-color:var(--gold);box-shadow:0 0 0 4px rgba(216,176,112,.2),0 0 14px var(--gold)}
+  .tl-node.active .yr,.tl-node.active .nm{color:var(--gold)}
+  .tl-node:hover .nub{border-color:var(--gold)}
+  .tl-node:focus-visible{outline:none} .tl-node:focus-visible .nub{outline:2px solid var(--gold);outline-offset:2px}
+  .tl-allbtn{position:absolute;right:0;top:-2px;pointer-events:auto}
+  body.tl-mode .mk{transition:opacity .5s, filter .5s}
+  body.tl-mode .mk.dim{opacity:.12;filter:grayscale(.7)}
+  body.tl-mode .mk.lit .mk-dot{box-shadow:0 0 0 4px rgba(255,255,255,.15),0 0 16px currentColor;animation:litpulse 1.8s ease-in-out infinite}
+  @keyframes litpulse{0%,100%{box-shadow:0 0 0 3px rgba(255,255,255,.12),0 0 10px currentColor}50%{box-shadow:0 0 0 6px rgba(255,255,255,.05),0 0 20px currentColor}}
+
+  @media (max-width:760px){
+    #timeline{bottom:118px}
+    .tl-node .nm{display:none}
+    .tl-track{height:44px}
+    #panel{width:100%;height:66%;top:auto;bottom:0;border-left:none;border-top:1px solid var(--faint);
+      transform:translateY(103%);border-radius:14px 14px 0 0}
+    #panel.open{transform:translateY(0)}
+    #panel h2{font-size:22px}
+    #topbar .ttl{font-size:12.5px}
+    #hud{flex-direction:column;align-items:stretch}
+    #hud .grp{order:2;justify-content:center} #hud .grp.r{order:1}
+    #cap{top:auto;bottom:118px;font-size:12.5px}
+  }
+  @media (prefers-reduced-motion:reduce){ *{transition-duration:.001ms!important} }
+</style>
+</head>
+<body>
+<div id="map"></div>
+
+<!-- top thesis bar -->
+<div id="topbar">
+  <div class="ttl">中国研究 · 思想地图<span>STATE · SOCIETY · LINEAGE</span></div>
+  <div class="chips" id="chips"></div>
+</div>
+<div id="cap"></div>
+
+<!-- timeline -->
+<div id="timeline" aria-label="历史时间轴">
+  <div class="tl-track">
+    <div class="tl-line"></div><div class="tl-fill" id="tlFill"></div>
+    <div id="tlNodes"></div>
+    <button class="ctl tl-allbtn" id="tlAll">全部</button>
+  </div>
+</div>
+
+<!-- HUD -->
+<div id="hud">
+  <div class="grp">
+    <div class="seg" role="group" aria-label="底图">
+      <button class="ctl" id="bSat" aria-pressed="true">卫星</button>
+      <button class="ctl" id="bTopo" aria-pressed="false">地形</button>
+    </div>
+    <button class="ctl" id="tProv" aria-pressed="true">省界</button>
+    <button class="ctl" id="tGeo" aria-pressed="true">山河</button>
+  </div>
+  <div class="grp r">
+    <button class="ctl" id="tlBtn" aria-pressed="false">⏳ 时间轴</button>
+    <button class="ctl" id="toChina">↺ 回到中国</button>
+    <button class="ctl" id="helpbtn" aria-label="说明">?</button>
+  </div>
+</div>
+
+<!-- panel -->
+<aside id="panel" aria-live="polite">
+  <button class="p-close" id="pclose" aria-label="关闭">✕</button>
+  <div class="p-hero"><div class="p-banner" id="pbanner"><div class="motif" id="pmotif"></div></div>
+    <div class="p-locale" id="plocale"></div></div>
+  <div class="p-inner" id="pinner"></div>
+</aside>
+
+<!-- hero -->
+<div id="hero">
+  <div class="eyebrow">An Intellectual Cartography of China · 卫星地形版</div>
+  <h1>把每一位学者,<span class="accent">钉回他们脚下的那片中国</span></h1>
+  <p class="lede">珠三角的祠堂、长安到开封的联姻网络、黄土高原的编户、Zomia 的逃逸山地、成都的茶馆、北京城南的浙江村……<b>21 位学者 / 学派</b>,沿着国家与社会、宗族与编户、农村与城市、传统与民俗五条线索,落在真实的卫星地形之上。点开顶部色片,看同一片土地如何被三种"宗族是什么"的答案重新解读。</p>
+  <div class="enter-row">
+    <button class="btn" id="enterbtn">进入地图 →</button>
+    <span class="hint-mini">卫星/地形可切换 · 拖动缩放 · 点击图钉看 AJS 文献</span>
+  </div>
+</div>
+
+<!-- help -->
+<div id="help">
+  <div class="help-card">
+    <h3>如何浏览</h3>
+    <div class="legend" id="legend"></div>
+    <ul>
+      <li><span class="k">卫星 / 地形</span> 切换底图;<span class="k">省界 / 山河</span> 叠加行政界与山脉水系注记</li>
+      <li><span class="k">拖动 · 滚轮 · 双指</span> 平移缩放(谷歌地图式)</li>
+      <li><span class="k">点击图钉</span> 飞向该学者的研究地,展开论点 · 方法 · 对话 · 争议 · <b>AJS 格式参考文献</b></li>
+      <li><span class="k">顶部色片</span> 按"宗族是什么 / 邻近理论 / 区域民族志"筛选学者</li>
+      <li><span class="k">⏳ 时间轴</span> 沿 周秦之变 → 唐宋变革 → 嘉靖大礼议 → 改革开放,点亮各节点对应的学者</li>
+      <li><span class="k">文献链接</span> 卡片底部每条参考文献可点击,标 <span class="k">DOI</span> 的直达期刊,标"出版社/书目"的跳出版社页</li>
+    </ul>
+    <button class="btn" id="helpclose">明白了</button>
+  </div>
+</div>
+
+<script>
+const CHINA = {"type":"FeatureCollection","features":[{"type":"Feature","properties":{"n":"新疆","full":"新疆维吾尔自治区","cp":[84.9023,42.148]},"geometry":{"type":"Polygon","coordinates":[[[96.42,42.76],[96.42,42.71],[95.98,42.5],[96.06,42.32],[96.24,42.23],[95.98,41.92],[95.27,41.62],[95.19,41.79],[94.57,41.48],[94.04,41.09],[93.87,40.69],[93.08,40.65],[92.64,39.64],[92.37,39.33],[92.37,39.02],[90.18,38.5],[90.35,38.23],[90.62,38.32],[90.53,37.84],[91.05,37.44],[91.32,37.09],[90.7,36.78],[90.79,36.61],[91.05,36.52],[91.05,36.08],[90.88,36.04],[90,36.25],[89.91,36.08],[89.74,36.08],[89.21,36.3],[88.77,36.34],[88.59,36.47],[87.36,36.43],[86.22,36.17],[86.13,35.86],[85.61,35.68],[85.08,35.73],[84.2,35.38],[83.14,35.42],[82.88,35.68],[82.44,35.73],[82.0,35.33],[81.65,35.24],[80.42,35.42],[80.24,35.29],[80.33,35.16],[80.24,35.2],[79.89,34.8],[79.8,34.5],[79.1,34.45],[79.01,34.32],[78.22,34.72],[78.05,35.24],[78.05,35.51],[77.43,35.46],[76.82,35.64],[76.55,35.86],[76.2,35.82],[75.94,36.04],[76.03,36.47],[75.85,36.69],[75.5,36.74],[75.41,36.96],[75.06,37.0],[74.88,36.91],[74.79,37.05],[74.53,37.09],[74.53,37.22],[74.88,37.22],[75.15,37.44],[74.88,37.57],[74.97,37.75],[74.88,38.45],[74.36,38.67],[74.18,38.67],[74.09,38.54],[73.83,38.58],[73.74,38.85],[73.83,38.98],[73.48,39.38],[73.92,39.51],[73.92,39.68],[73.83,39.77],[74.0,40.03],[74.88,40.34],[74.79,40.52],[75.23,40.43],[75.59,40.65],[75.76,40.3],[76.38,40.39],[76.9,41.0],[77.61,41.0],[78.13,41.22],[78.13,41.4],[80.16,42.06],[80.24,42.28],[80.16,42.63],[80.24,42.85],[80.51,42.89],[80.42,43.07],[80.77,43.2],[80.42,44.16],[80.42,44.6],[79.98,44.82],[79.98,44.96],[81.74,45.4],[82.09,45.22],[82.53,45.22],[82.27,45.66],[83.06,47.24],[83.67,47.02],[84.73,47.02],[84.9,46.89],[85.52,47.07],[85.69,47.29],[85.52,48.12],[85.78,48.43],[86.57,48.56],[86.84,48.82],[86.75,48.96],[86.84,49.13],[87.8,49.17],[87.89,49.0],[87.71,48.91],[88.07,48.74],[87.98,48.6],[88.51,48.38],[88.68,48.16],[89.12,47.99],[89.56,48.03],[89.74,47.86],[90.09,47.86],[90.35,47.68],[90.53,47.24],[90.88,46.98],[91.05,46.58],[90.88,46.32],[91.05,46.01],[90.7,45.75],[90.7,45.53],[90.88,45.22],[91.58,45.09],[93.52,44.96],[94.75,44.34],[95.36,44.3],[95.36,44.03],[95.54,43.9],[95.89,43.24],[96.33,42.93],[96.42,42.76]]]}},{"type":"Feature","properties":{"n":"西藏","full":"西藏自治区","cp":[87.8695,31.6846]},"geometry":{"type":"Polygon","coordinates":[[[79.01,34.32],[79.1,34.45],[79.8,34.5],[79.89,34.8],[80.24,35.2],[80.33,35.16],[80.24,35.29],[80.42,35.42],[81.65,35.24],[82.0,35.33],[82.44,35.73],[82.88,35.68],[83.14,35.42],[84.2,35.38],[85.08,35.73],[85.61,35.68],[86.13,35.86],[86.22,36.17],[87.36,36.43],[88.59,36.47],[88.77,36.34],[89.21,36.3],[89.74,36.08],[89.38,36.04],[89.47,35.9],[89.74,35.77],[89.74,35.42],[89.47,35.38],[89.56,34.89],[89.82,34.85],[89.74,34.67],[89.82,34.37],[89.65,34.01],[90.09,33.49],[90.7,33.13],[91.41,33.13],[91.93,32.83],[92.2,32.83],[92.29,32.74],[92.99,32.74],[93.52,32.48],[93.78,32.56],[94.13,32.43],[94.66,32.61],[95.19,32.43],[95.01,32.3],[95.19,32.34],[95.27,32.21],[95.36,32.17],[95.36,31.99],[95.45,31.82],[95.8,31.68],[95.98,31.82],[96.15,31.6],[96.24,31.95],[96.5,31.73],[96.86,31.68],[96.77,31.99],[97.29,32.08],[97.38,32.56],[97.73,32.52],[98.17,32.34],[98.44,31.86],[98.88,31.42],[98.61,31.2],[98.96,30.76],[99.14,29.27],[98.96,29.14],[98.96,28.83],[98.79,28.87],[98.79,29.0],[98.7,28.92],[98.61,28.52],[98.79,28.34],[98.7,28.21],[98.35,28.12],[98.26,28.39],[98.17,28.12],[97.56,28.52],[97.29,28.08],[97.38,27.91],[97.03,27.73],[96.5,28.12],[95.71,28.26],[95.36,28.12],[95.27,27.95],[94.22,27.55],[93.87,27.03],[93.6,26.94],[92.11,26.85],[92.02,27.47],[91.58,27.55],[91.58,27.91],[91.41,28.04],[91.05,27.86],[90.7,28.08],[89.82,28.21],[89.65,28.17],[89.12,27.6],[89.12,27.33],[89.03,27.2],[88.77,27.42],[88.86,27.99],[88.68,28.12],[88.15,27.91],[87.89,27.95],[87.71,27.82],[87.1,27.82],[86.75,28.12],[86.57,28.12],[86.48,27.91],[86.13,28.12],[86.04,27.91],[85.69,28.34],[85.61,28.26],[85.17,28.34],[85.17,28.65],[84.9,28.56],[84.46,28.74],[84.29,28.87],[84.2,29.22],[84.11,29.27],[83.58,29.18],[83.23,29.58],[82.18,30.06],[82.09,30.32],[81.39,30.37],[81.21,30.01],[81.04,30.23],[80.07,30.59],[79.72,30.94],[79.01,31.07],[78.75,31.33],[78.84,31.6],[78.66,31.82],[78.75,31.9],[78.49,32.12],[78.4,32.52],[78.75,32.7],[78.93,32.34],[79.28,32.56],[79.1,33.18],[78.66,33.66],[78.66,34.1],[78.93,34.15],[79.01,34.32]]]}},{"type":"Feature","properties":{"n":"内蒙古","full":"内蒙古自治区","cp":[112.5977,46.3408]},"geometry":{"type":"Polygon","coordinates":[[[97.21,42.8],[99.49,42.58],[100.81,42.67],[101.78,42.5],[102.04,42.23],[102.74,42.14],[103.36,41.88],[103.89,41.79],[104.5,41.88],[104.5,41.66],[105.03,41.57],[105.73,41.92],[107.4,42.45],[109.42,42.45],[110.39,42.76],[111.01,43.33],[111.97,43.68],[111.97,43.81],[111.45,44.38],[111.8,45],[111.97,45.09],[113.64,44.74],[114.17,44.96],[114.52,45.4],[115.66,45.44],[116.19,45.7],[116.28,45.97],[116.54,46.27],[117.33,46.36],[117.42,46.58],[117.77,46.54],[118.3,46.76],[118.74,46.71],[118.92,46.76],[119.09,46.67],[119.71,46.63],[119.97,46.71],[119.71,47.2],[118.48,47.99],[117.86,48.03],[117.33,47.68],[116.81,47.9],[116.19,47.86],[115.93,47.68],[115.58,47.9],[115.49,48.16],[115.84,48.25],[115.84,48.56],[116.72,49.83],[117.77,49.53],[118.56,49.92],[119.27,50.1],[119.36,50.32],[119.18,50.36],[119.53,50.76],[119.53,50.89],[119.71,51.06],[120.15,51.68],[120.67,51.94],[120.76,52.12],[120.76,52.25],[120.59,52.34],[120.67,52.51],[120.41,52.65],[120.06,52.6],[120.06,52.73],[120.85,53.26],[121.46,53.35],[121.82,53.04],[121.2,52.56],[121.64,52.43],[121.73,52.29],[121.99,52.29],[122.17,52.51],[122.7,52.25],[122.61,52.08],[122.96,51.33],[123.31,51.24],[123.66,51.37],[124.37,51.28],[124.54,51.37],[124.89,51.37],[125.07,51.64],[125.33,51.64],[126.04,51.02],[125.77,50.76],[125.77,50.54],[125.33,50.14],[125.16,49.83],[125.24,49.17],[124.8,49.13],[124.45,48.12],[124.28,48.52],[122.43,47.37],[123.05,46.71],[123.4,46.89],[123.4,46.98],[123.49,46.98],[123.57,46.85],[123.57,46.89],[123.57,46.67],[123.05,46.58],[123.22,46.23],[122.78,46.01],[122.7,45.7],[122.43,45.88],[122.26,45.79],[121.82,46.01],[121.73,45.75],[121.9,45.7],[122.26,45.26],[122.08,44.87],[122.34,44.25],[123.13,44.47],[123.49,43.73],[123.31,43.51],[123.66,43.37],[123.57,43.02],[123.31,42.98],[123.13,42.8],[122.78,42.71],[122.34,42.85],[122.34,42.67],[121.99,42.71],[121.73,42.45],[121.46,42.5],[120.5,42.1],[120.15,41.7],[119.88,42.19],[119.53,42.36],[119.36,42.28],[119.27,41.7],[119.44,41.62],[119.27,41.31],[118.39,41.31],[118.12,41.75],[118.3,41.79],[118.3,42.1],[118.12,42.06],[117.95,42.23],[118.04,42.41],[117.77,42.63],[117.51,42.58],[117.33,42.45],[116.89,42.41],[116.81,42.01],[116.28,42.01],[116.02,41.79],[115.93,41.92],[115.22,41.57],[114.96,41.62],[114.87,42.1],[114.52,42.14],[114.17,41.79],[114.26,41.57],[113.91,41.44],[113.99,41.22],[113.91,41.13],[114.08,40.74],[114.08,40.52],[113.82,40.52],[113.55,40.34],[113.2,40.39],[112.76,40.17],[112.32,40.25],[111.97,39.59],[111.45,39.64],[111.36,39.42],[111.09,39.38],[111.09,39.59],[110.65,39.29],[110.13,39.46],[110.21,39.29],[109.86,39.24],[109.95,39.16],[108.98,38.32],[109.07,38.01],[108.9,37.97],[108.81,38.01],[108.72,37.71],[108.19,37.62],[107.31,38.1],[106.79,38.19],[106.52,38.32],[106.96,38.98],[106.79,39.38],[106.35,39.29],[105.91,38.72],[105.82,37.79],[104.33,37.44],[103.45,37.84],[103.36,38.01],[103.54,38.14],[103.45,38.36],[104.24,38.98],[104.06,39.42],[103.36,39.33],[103.01,39.11],[102.48,39.24],[101.87,39.11],[102.04,38.89],[101.78,38.67],[101.34,38.76],[101.25,39.02],[100.99,38.94],[100.81,39.42],[100.55,39.42],[100.02,39.77],[99.49,39.86],[100.11,40.25],[100.2,40.65],[99.93,41.0],[99.23,40.87],[99.05,40.69],[98.96,40.78],[98.79,40.61],[98.53,40.74],[98.61,40.65],[98.35,40.56],[98.35,40.91],[97.47,41.48],[97.82,41.62],[97.82,41.75],[97.21,42.8]]]}},{"type":"Feature","properties":{"n":"青海","full":"青海省","cp":[95.2402,35.4199]},"geometry":{"type":"Polygon","coordinates":[[[89.74,36.08],[89.91,36.08],[90,36.25],[90.88,36.04],[91.05,36.08],[91.05,36.52],[90.79,36.61],[90.7,36.78],[91.32,37.09],[91.05,37.44],[90.53,37.84],[90.62,38.32],[90.35,38.23],[90.18,38.5],[92.37,39.02],[92.37,39.11],[93.16,39.2],[93.16,38.98],[93.69,38.94],[93.87,38.72],[94.31,38.76],[94.57,38.36],[95.01,38.41],[95.45,38.28],[95.71,38.36],[96.24,38.1],[96.42,38.23],[96.68,38.19],[96.68,38.45],[97.12,38.58],[97.03,39.2],[98.17,38.8],[98.35,39.02],[98.61,38.94],[98.79,39.07],[99.14,38.94],[99.84,38.36],[100.2,38.28],[100.02,38.45],[100.11,38.5],[100.46,38.28],[100.72,38.23],[101.16,37.84],[101.51,37.88],[101.78,37.62],[101.95,37.71],[102.13,37.44],[102.57,37.18],[102.48,36.96],[102.66,36.83],[102.57,36.74],[102.83,36.34],[103.01,36.25],[102.92,36.08],[102.92,35.9],[102.66,35.77],[102.83,35.6],[102.48,35.6],[102.3,35.42],[102.39,35.2],[101.95,34.85],[101.95,34.63],[102.22,34.41],[102.13,34.28],[101.69,34.1],[100.99,34.37],[100.81,34.28],[101.25,33.66],[101.51,33.71],[101.6,33.53],[101.78,33.53],[101.69,33.31],[101.78,33.22],[101.6,33.13],[101.16,33.22],[101.25,32.7],[100.72,32.65],[100.72,32.52],[100.37,32.74],[100.11,32.65],[100.11,32.87],[99.84,33.0],[99.76,32.74],[99.23,32.91],[99.23,33.05],[98.88,33.18],[98.44,34.06],[97.82,34.19],[97.65,34.1],[97.73,33.93],[97.38,33.88],[97.47,33.57],[97.73,33.4],[97.38,32.87],[97.47,32.7],[97.73,32.52],[97.38,32.56],[97.29,32.08],[96.77,31.99],[96.86,31.68],[96.5,31.73],[96.24,31.95],[96.15,31.6],[95.98,31.82],[95.8,31.68],[95.45,31.82],[95.36,31.99],[95.36,32.17],[95.27,32.21],[95.19,32.34],[95.01,32.3],[95.19,32.43],[94.66,32.61],[94.13,32.43],[93.78,32.56],[93.52,32.48],[92.99,32.74],[92.29,32.74],[92.2,32.83],[91.93,32.83],[91.41,33.13],[90.7,33.13],[90.09,33.49],[89.65,34.01],[89.82,34.37],[89.74,34.67],[89.82,34.85],[89.56,34.89],[89.47,35.38],[89.74,35.42],[89.74,35.77],[89.47,35.9],[89.38,36.04],[89.74,36.08]]]}},{"type":"Feature","properties":{"n":"四川","full":"四川省","cp":[101.9199,30.1904]},"geometry":{"type":"Polygon","coordinates":[[[101.78,33.53],[101.87,33.57],[101.95,33.44],[101.87,33.09],[102.48,33.44],[102.22,33.93],[102.92,34.32],[103.1,34.19],[103.18,33.79],[104.15,33.62],[104.24,33.4],[104.41,33.31],[104.33,33.22],[104.41,33.05],[104.33,32.87],[104.41,32.74],[105.21,32.61],[105.38,32.74],[105.38,32.87],[105.47,32.91],[105.56,32.74],[106.08,32.87],[106.08,32.74],[106.35,32.65],[107.05,32.7],[107.14,32.48],[107.23,32.43],[107.4,32.52],[108.02,32.17],[108.28,32.26],[108.54,32.21],[108.37,32.17],[108.28,31.9],[108.54,31.68],[108.19,31.51],[107.93,30.85],[107.49,30.85],[107.4,30.76],[107.49,30.63],[107.05,30.01],[106.79,30.01],[106.61,30.32],[106.26,30.19],[105.82,30.45],[105.64,30.28],[105.56,30.1],[105.73,29.88],[105.29,29.53],[105.47,29.31],[105.73,29.27],[105.82,28.96],[106.26,28.87],[106.35,28.52],[106.0,28.74],[105.64,28.43],[105.91,28.12],[106.17,28.12],[106.35,27.82],[105.64,27.64],[105.56,27.77],[105.29,27.73],[105.21,27.99],[105.03,28.08],[104.85,27.91],[104.41,27.95],[104.33,28.04],[104.41,28.12],[104.41,28.26],[104.24,28.43],[104.41,28.61],[103.89,28.65],[103.8,28.3],[103.45,28.12],[103.45,27.77],[102.92,27.29],[103.01,26.37],[102.66,26.19],[102.57,26.37],[102.13,26.1],[101.87,26.06],[101.6,26.24],[101.69,26.37],[101.43,26.59],[101.43,26.81],[101.43,26.72],[101.16,27.03],[101.16,27.16],[100.72,27.86],[100.37,27.82],[100.28,27.73],[100.02,28.12],[100.2,28.34],[99.67,28.83],[99.4,28.52],[99.4,28.17],[99.23,28.3],[98.96,30.76],[98.61,31.2],[98.88,31.42],[98.44,31.86],[98.17,32.34],[97.73,32.52],[97.47,32.7],[97.38,32.87],[97.73,33.4],[97.47,33.57],[97.38,33.88],[97.73,33.93],[97.65,34.1],[97.82,34.19],[98.44,34.06],[98.88,33.18],[99.23,33.05],[99.23,32.91],[99.76,32.74],[99.84,33.0],[100.11,32.87],[100.11,32.65],[100.37,32.74],[100.72,32.52],[100.72,32.65],[101.25,32.7],[101.16,33.22],[101.6,33.13],[101.78,33.22],[101.69,33.31],[101.78,33.53]]]}},{"type":"Feature","properties":{"n":"黑龙江","full":"黑龙江省","cp":[126.1445,48.7156]},"geometry":{"type":"Polygon","coordinates":[[[121.46,53.35],[123.66,53.57],[124.89,53.09],[125.07,53.22],[125.6,53.09],[125.68,52.91],[126.12,52.78],[126.04,52.6],[126.21,52.51],[126.39,52.29],[126.39,52.21],[126.56,52.16],[126.47,51.94],[126.91,51.37],[126.83,51.28],[127.0,51.33],[126.91,51.11],[127.27,50.76],[127.35,50.27],[127.62,50.23],[127.53,49.88],[127.79,49.61],[128.76,49.57],[129.11,49.35],[129.46,49.44],[130.25,48.87],[130.69,48.87],[130.52,48.65],[130.87,48.3],[130.69,48.12],[131.04,47.68],[132.54,47.72],[132.63,47.94],[133.07,48.12],[133.51,48.12],[134.21,48.38],[135.09,48.43],[134.74,48.25],[134.56,47.99],[134.74,47.68],[134.56,47.46],[134.38,47.46],[134.21,47.29],[134.21,47.15],[133.86,46.54],[133.95,46.27],[133.51,45.84],[133.42,45.57],[133.24,45.53],[133.07,45.13],[132.89,45.04],[131.92,45.35],[131.57,45.04],[131.04,44.87],[131.31,44.08],[131.22,43.73],[131.31,43.46],[130.87,43.42],[130.52,43.64],[130.34,43.99],[129.99,43.86],[129.9,44.03],[129.81,43.9],[129.29,43.81],[129.2,43.59],[128.85,43.55],[128.5,44.16],[128.41,44.47],[128.06,44.34],[128.06,44.12],[127.71,44.12],[127.53,44.6],[127.09,44.6],[127.0,44.78],[127.09,45],[126.91,45.13],[126.56,45.26],[126.04,45.18],[125.77,45.31],[125.68,45.53],[125.07,45.4],[124.89,45.53],[124.37,45.44],[124.01,45.75],[123.93,46.23],[123.22,46.23],[123.05,46.58],[123.57,46.67],[123.57,46.89],[123.57,46.85],[123.49,46.98],[123.4,46.98],[123.4,46.89],[123.05,46.71],[122.43,47.37],[124.28,48.52],[124.45,48.12],[124.8,49.13],[125.24,49.17],[125.16,49.83],[125.33,50.14],[125.77,50.54],[125.77,50.76],[126.04,51.02],[125.33,51.64],[125.07,51.64],[124.89,51.37],[124.54,51.37],[124.37,51.28],[123.66,51.37],[123.31,51.24],[122.96,51.33],[122.61,52.08],[122.7,52.25],[122.17,52.51],[121.99,52.29],[121.73,52.29],[121.64,52.43],[121.2,52.56],[121.82,53.04],[121.46,53.35]]]}},{"type":"Feature","properties":{"n":"甘肃","full":"甘肃省","cp":[99.7129,38.166]},"geometry":{"type":"Polygon","coordinates":[[[96.42,42.71],[97.21,42.8],[97.82,41.75],[97.82,41.62],[97.47,41.48],[98.35,40.91],[98.35,40.56],[98.61,40.65],[98.53,40.74],[98.79,40.61],[98.96,40.78],[99.05,40.69],[99.23,40.87],[99.93,41.0],[100.2,40.65],[100.11,40.25],[99.49,39.86],[100.02,39.77],[100.55,39.42],[100.81,39.42],[100.99,38.94],[101.25,39.02],[101.34,38.76],[101.78,38.67],[102.04,38.89],[101.87,39.11],[102.48,39.24],[103.01,39.11],[103.36,39.33],[104.06,39.42],[104.24,38.98],[103.45,38.36],[103.54,38.14],[103.36,38.01],[103.45,37.84],[104.33,37.44],[104.59,37.44],[104.59,37.22],[104.85,37.22],[105.29,36.83],[105.21,36.69],[105.47,36.12],[105.29,35.99],[105.38,35.77],[105.73,35.73],[105.82,35.55],[106.0,35.46],[105.91,35.42],[106.08,35.38],[106.26,35.42],[106.35,35.24],[106.52,35.33],[106.44,35.68],[106.7,35.68],[106.96,35.82],[106.88,36.12],[106.52,36.25],[106.52,36.47],[106.44,36.56],[106.61,36.78],[106.61,37.09],[107.31,37.09],[107.31,36.91],[108.72,36.34],[108.63,35.99],[108.54,35.86],[108.63,35.55],[108.54,35.29],[107.75,35.29],[107.75,35.11],[107.84,35.02],[107.67,34.94],[107.23,34.89],[106.96,35.07],[106.61,35.07],[106.52,34.76],[106.35,34.59],[106.7,34.32],[106.52,34.28],[106.61,34.15],[106.44,33.93],[106.52,33.53],[106.0,33.62],[105.73,33.4],[106.0,33.18],[105.91,33.0],[105.38,32.87],[105.38,32.74],[105.21,32.61],[104.41,32.74],[104.33,32.87],[104.41,33.05],[104.33,33.22],[104.41,33.31],[104.24,33.4],[104.15,33.62],[103.18,33.79],[103.1,34.19],[102.92,34.32],[102.22,33.93],[102.48,33.44],[101.87,33.09],[101.95,33.44],[101.87,33.57],[101.6,33.53],[101.51,33.71],[101.25,33.66],[100.81,34.28],[100.99,34.37],[101.69,34.1],[102.13,34.28],[102.22,34.41],[101.95,34.63],[101.95,34.85],[102.39,35.2],[102.3,35.42],[102.48,35.6],[102.83,35.6],[102.66,35.77],[102.92,35.9],[102.92,36.08],[103.01,36.25],[102.83,36.34],[102.57,36.74],[102.66,36.83],[102.48,36.96],[102.57,37.18],[102.13,37.44],[101.95,37.71],[101.78,37.62],[101.51,37.88],[101.16,37.84],[100.72,38.23],[100.46,38.28],[100.11,38.5],[100.02,38.45],[100.2,38.28],[99.84,38.36],[99.14,38.94],[98.79,39.07],[98.61,38.94],[98.35,39.02],[98.17,38.8],[97.03,39.2],[97.12,38.58],[96.68,38.45],[96.68,38.19],[96.42,38.23],[96.24,38.1],[95.71,38.36],[95.45,38.28],[95.01,38.41],[94.57,38.36],[94.31,38.76],[93.87,38.72],[93.69,38.94],[93.16,38.98],[93.16,39.2],[92.37,39.11],[92.37,39.33],[92.64,39.64],[93.08,40.65],[93.87,40.69],[94.04,41.09],[94.57,41.48],[95.19,41.79],[95.27,41.62],[95.98,41.92],[96.24,42.23],[96.06,42.32],[95.98,42.5],[96.42,42.71]]]}},{"type":"Feature","properties":{"n":"云南","full":"云南省","cp":[101.0652,25.1807]},"geometry":{"type":"Polygon","coordinates":[[[98.17,28.12],[98.26,28.39],[98.35,28.12],[98.7,28.21],[98.79,28.34],[98.61,28.52],[98.7,28.92],[98.79,29.0],[98.79,28.87],[98.96,28.83],[98.96,29.14],[99.14,29.27],[99.23,28.3],[99.4,28.17],[99.4,28.52],[99.67,28.83],[100.2,28.34],[100.02,28.12],[100.28,27.73],[100.37,27.82],[100.72,27.86],[101.16,27.16],[101.16,27.03],[101.43,26.72],[101.43,26.81],[101.43,26.59],[101.69,26.37],[101.6,26.24],[101.87,26.06],[102.13,26.1],[102.57,26.37],[102.66,26.19],[103.01,26.37],[102.92,27.29],[103.45,27.77],[103.45,28.12],[103.8,28.3],[103.89,28.65],[104.41,28.61],[104.24,28.43],[104.41,28.26],[104.41,28.12],[104.33,28.04],[104.41,27.95],[104.85,27.91],[105.03,28.08],[105.21,27.99],[105.29,27.73],[105.21,27.38],[104.59,27.33],[104.41,27.47],[104.15,27.25],[103.89,27.42],[103.62,27.03],[103.71,26.98],[103.71,26.76],[103.89,26.54],[104.41,26.67],[104.68,26.41],[104.33,25.71],[104.85,25.22],[104.59,25.05],[104.68,24.96],[104.5,24.74],[104.68,24.35],[104.77,24.48],[105.03,24.43],[105.21,24.08],[105.47,24.04],[105.56,24.13],[106.0,24.13],[106.17,23.82],[106.17,23.55],[105.64,23.42],[105.56,23.2],[105.29,23.38],[104.85,23.16],[104.77,22.85],[104.33,22.68],[104.15,22.81],[103.97,22.54],[103.62,22.76],[103.54,22.59],[103.36,22.81],[103.1,22.46],[102.48,22.76],[102.3,22.41],[101.87,22.37],[101.78,22.5],[101.6,22.19],[101.87,21.62],[101.78,21.14],[101.6,21.23],[101.25,21.18],[101.16,21.75],[100.63,21.45],[100.11,21.49],[99.93,22.06],[99.23,22.15],[99.4,22.59],[99.32,22.72],[99.49,23.07],[98.88,23.2],[98.7,23.95],[98.88,24.13],[98.17,24.08],[97.73,23.86],[97.56,23.91],[97.73,24.13],[97.65,24.43],[97.56,24.43],[97.56,24.74],[97.73,24.83],[97.82,25.27],[98.17,25.4],[98.17,25.62],[98.35,25.58],[98.53,25.84],[98.7,25.88],[98.61,26.06],[98.7,26.15],[98.79,26.59],[98.7,27.51],[98.53,27.64],[98.35,27.51],[98.17,28.12]]]}},{"type":"Feature","properties":{"n":"广西","full":"广西壮族自治区","cp":[107.7813,23.6426]},"geometry":{"type":"Polygon","coordinates":[[[104.5,24.74],[104.68,24.61],[105.21,24.96],[106.0,24.65],[106.17,24.79],[106.17,24.96],[107.05,25.27],[106.96,25.49],[107.23,25.62],[107.49,25.22],[107.75,25.22],[107.84,25.14],[108.11,25.22],[108.19,25.44],[108.37,25.53],[108.63,25.31],[108.63,25.58],[109.07,25.53],[108.98,25.75],[109.34,25.71],[109.51,26.02],[109.78,25.88],[109.95,26.19],[110.21,25.97],[110.57,26.32],[111.18,26.32],[111.27,26.24],[111.27,25.88],[111.45,25.84],[111.01,25.0],[111.09,24.96],[111.36,25.14],[111.53,24.65],[111.71,24.79],[112.06,24.74],[111.88,24.65],[112.06,24.35],[111.88,24.21],[111.88,23.99],[111.8,23.82],[111.62,23.82],[111.62,23.69],[111.36,23.47],[111.45,23.03],[111.27,22.81],[110.74,22.54],[110.74,22.28],[110.65,22.15],[110.3,22.15],[110.3,21.88],[109.95,21.84],[109.86,21.66],[109.78,21.62],[109.78,21.4],[109.6,21.45],[109.16,21.36],[109.25,20.87],[109.07,20.96],[109.07,21.53],[108.72,21.53],[108.63,21.66],[108.28,21.49],[107.84,21.62],[107.4,21.62],[107.05,21.8],[107.05,21.93],[106.7,22.02],[106.61,22.41],[106.79,22.76],[106.7,22.9],[105.91,22.94],[105.56,23.07],[105.56,23.2],[105.64,23.42],[106.17,23.55],[106.17,23.82],[106.0,24.13],[105.56,24.13],[105.47,24.04],[105.21,24.08],[105.03,24.43],[104.77,24.48],[104.68,24.35],[104.5,24.74]]]}},{"type":"Feature","properties":{"n":"湖南","full":"湖南省","cp":[111.5332,27.3779]},"geometry":{"type":"Polygon","coordinates":[[[109.25,28.48],[109.25,29.14],[109.51,29.62],[109.69,29.62],[109.78,29.75],[110.48,29.66],[110.65,29.75],[110.48,30.01],[110.83,30.15],[111.8,29.93],[112.24,29.53],[112.5,29.62],[112.68,29.58],[112.94,29.79],[113.03,29.75],[112.94,29.49],[113.03,29.44],[113.55,29.84],[113.55,29.71],[113.73,29.58],[113.64,29.31],[113.73,29.09],[113.91,29.05],[114.17,28.83],[114.08,28.56],[114.26,28.34],[113.73,27.95],[113.64,27.6],[113.64,27.38],[113.82,27.29],[113.73,27.11],[113.91,26.94],[113.91,26.63],[114.08,26.59],[113.99,26.19],[114.26,26.15],[113.99,26.06],[113.91,25.44],[113.64,25.31],[113.2,25.53],[112.85,25.36],[113.03,25.22],[113.03,24.96],[112.85,24.92],[112.59,25.14],[112.24,25.18],[112.15,24.87],[112.06,24.74],[111.71,24.79],[111.53,24.65],[111.36,25.14],[111.09,24.96],[111.01,25.0],[111.45,25.84],[111.27,25.88],[111.27,26.24],[111.18,26.32],[110.57,26.32],[110.21,25.97],[109.95,26.19],[109.78,25.88],[109.51,26.02],[109.42,26.28],[109.25,26.32],[109.42,26.59],[109.34,26.72],[109.51,26.81],[109.51,27.03],[109.34,27.16],[108.9,27.03],[108.81,27.11],[109.42,27.6],[109.34,27.91],[109.34,28.26],[109.25,28.48]]]}},{"type":"Feature","properties":{"n":"陕西","full":"陕西省","cp":[109.5996,35.7396]},"geometry":{"type":"Polygon","coordinates":[[[105.47,32.91],[105.91,33.0],[106.0,33.18],[105.73,33.4],[106.0,33.62],[106.52,33.53],[106.44,33.93],[106.61,34.15],[106.52,34.28],[106.7,34.32],[106.35,34.59],[106.52,34.76],[106.61,35.07],[106.96,35.07],[107.23,34.89],[107.67,34.94],[107.84,35.02],[107.75,35.11],[107.75,35.29],[108.54,35.29],[108.63,35.55],[108.54,35.86],[108.63,35.99],[108.72,36.34],[107.31,36.91],[107.31,37.62],[107.67,37.88],[108.19,37.62],[108.72,37.71],[108.81,38.01],[108.9,37.97],[109.07,38.01],[108.98,38.32],[109.95,39.16],[109.86,39.24],[110.21,39.29],[110.13,39.46],[110.65,39.29],[111.09,39.59],[111.09,39.38],[111.18,39.24],[110.83,38.5],[110.48,38.19],[110.48,37.97],[110.83,37.66],[110.39,37.0],[110.57,35.64],[110.21,34.89],[110.21,34.67],[110.39,34.59],[110.48,34.23],[110.65,34.15],[110.65,33.84],[111.01,33.53],[111.01,33.27],[110.74,33.13],[110.57,33.27],[110.3,33.18],[109.6,33.27],[109.42,33.13],[109.78,33.05],[109.78,32.91],[110.13,32.74],[110.13,32.61],[109.69,32.61],[109.51,32.43],[109.6,31.73],[109.25,31.73],[109.07,31.95],[108.54,32.21],[108.28,32.26],[108.02,32.17],[107.4,32.52],[107.23,32.43],[107.14,32.48],[107.05,32.7],[106.35,32.65],[106.08,32.74],[106.08,32.87],[105.56,32.74],[105.47,32.91]]]}},{"type":"Feature","properties":{"n":"广东","full":"广东省","cp":[113.4668,22.8076]},"geometry":{"type":"Polygon","coordinates":[[[109.78,21.4],[111.62,23.82],[112.85,25.36],[115.75,24.79],[115.93,22.72],[113.12,21.84],[110.04,20.13],[109.78,21.4]],[[113.6,22.16],[113.61,22.13],[113.55,22.11],[113.54,22.2],[113.58,22.2],[113.6,22.16]]]}},{"type":"Feature","properties":{"n":"吉林","full":"吉林省","cp":[125.7746,43.5938]},"geometry":{"type":"Polygon","coordinates":[[[123.22,46.23],[123.93,46.23],[124.01,45.75],[124.37,45.44],[124.89,45.53],[125.07,45.4],[125.68,45.53],[125.77,45.31],[126.04,45.18],[126.56,45.26],[126.91,45.13],[127.09,45],[127.0,44.78],[127.09,44.6],[127.53,44.6],[127.71,44.12],[128.06,44.12],[128.06,44.34],[128.41,44.47],[128.5,44.16],[128.85,43.55],[129.2,43.59],[129.29,43.81],[129.81,43.9],[129.9,44.03],[129.99,43.86],[130.34,43.99],[130.52,43.64],[130.87,43.42],[131.31,43.46],[131.31,43.33],[131.13,42.93],[130.43,42.71],[130.61,42.67],[130.61,42.45],[130.25,42.76],[130.25,42.89],[130.17,42.98],[129.9,43.02],[129.73,42.5],[129.38,42.45],[128.94,42.01],[128.06,42.01],[128.32,41.57],[128.14,41.35],[127.09,41.53],[127.18,41.57],[126.91,41.79],[126.65,41.66],[126.12,40.96],[125.68,40.87],[125.6,40.91],[125.77,41.22],[125.33,41.66],[125.33,41.97],[125.42,42.1],[125.33,42.14],[124.89,42.8],[124.89,43.07],[124.72,43.07],[124.45,42.85],[124.28,43.24],[123.84,43.46],[123.66,43.37],[123.31,43.51],[123.49,43.73],[123.13,44.47],[122.34,44.25],[122.08,44.87],[122.26,45.26],[121.9,45.7],[121.73,45.75],[121.82,46.01],[122.26,45.79],[122.43,45.88],[122.7,45.7],[122.78,46.01],[123.22,46.23]]]}},{"type":"Feature","properties":{"n":"河北","full":"河北省","cp":[115.4004,39.4688]},"geometry":{"type":"MultiPolygon","coordinates":[[[[114.52,39.51],[114.35,39.86],[113.99,39.99],[114.52,40.34],[114.35,40.39],[114.26,40.61],[114.08,40.74],[113.91,41.13],[113.99,41.22],[113.91,41.44],[114.26,41.57],[114.17,41.79],[114.52,42.14],[114.87,42.1],[114.96,41.62],[115.22,41.57],[115.93,41.92],[116.02,41.79],[116.28,42.01],[116.81,42.01],[116.89,42.41],[117.33,42.45],[117.51,42.58],[117.77,42.63],[118.04,42.41],[117.95,42.23],[118.12,42.06],[118.3,42.1],[118.3,41.79],[118.12,41.75],[118.39,41.31],[119.27,41.31],[118.83,40.83],[119.27,40.52],[119.53,40.56],[119.71,40.12],[119.88,39.95],[119.53,39.68],[119.44,39.42],[118.92,39.07],[118.48,38.94],[118.12,39.02],[118.04,39.24],[117.86,39.42],[117.95,39.59],[117.69,39.59],[117.51,39.77],[117.51,39.99],[117.69,39.99],[117.69,40.08],[117.42,40.21],[117.25,40.52],[117.42,40.65],[116.98,40.69],[116.63,41.04],[116.37,40.91],[116.46,40.78],[116.19,40.78],[116.1,40.61],[115.75,40.56],[115.93,40.25],[115.4,39.95],[115.49,39.64],[115.75,39.51],[116.19,39.59],[116.37,39.46],[116.54,39.59],[116.81,39.59],[116.89,39.11],[116.72,38.94],[116.72,38.8],[117.25,38.54],[117.6,38.63],[117.95,38.32],[117.42,37.84],[116.81,37.84],[116.46,37.49],[116.28,37.57],[116.28,37.35],[116.02,37.35],[115.75,36.91],[115.31,36.52],[115.49,36.17],[115.31,36.08],[115.14,36.21],[114.96,36.08],[113.73,36.34],[113.47,36.65],[113.73,36.87],[113.73,37.13],[114.17,37.66],[113.99,37.71],[113.82,38.14],[113.55,38.28],[113.55,38.54],[113.82,38.8],[113.82,38.94],[113.91,39.02],[114.35,39.07],[114.52,39.51]]],[[[117.25,40.08],[117.16,39.81],[117.16,39.64],[116.89,39.68],[116.89,39.81],[116.81,39.99],[117.25,40.08]]]]}},{"type":"Feature","properties":{"n":"湖北","full":"湖北省","cp":[112.2363,31.1572]},"geometry":{"type":"Polygon","coordinates":[[[110.21,31.16],[110.13,31.38],[109.69,31.55],[109.78,31.68],[109.6,31.73],[109.51,32.43],[109.69,32.61],[110.13,32.61],[110.13,32.74],[109.78,32.91],[109.78,33.05],[109.42,33.13],[109.6,33.27],[110.3,33.18],[110.57,33.27],[110.74,33.13],[111.01,33.27],[111.53,32.61],[112.32,32.34],[113.2,32.43],[113.47,32.3],[113.73,32.43],[113.82,31.86],[113.99,31.77],[114.17,31.86],[114.52,31.77],[114.61,31.55],[114.79,31.46],[115.14,31.6],[115.22,31.42],[115.4,31.42],[115.58,31.2],[116.02,31.03],[115.75,30.67],[116.1,30.19],[116.1,29.84],[115.93,29.71],[115.49,29.79],[114.87,29.4],[114.26,29.36],[113.91,29.05],[113.73,29.09],[113.64,29.31],[113.73,29.58],[113.55,29.71],[113.55,29.84],[113.03,29.44],[112.94,29.49],[113.03,29.75],[112.94,29.79],[112.68,29.58],[112.5,29.62],[112.24,29.53],[111.8,29.93],[110.83,30.15],[110.48,30.01],[110.65,29.75],[110.48,29.66],[109.78,29.75],[109.69,29.62],[109.51,29.62],[109.25,29.14],[109.07,29.36],[108.98,29.31],[108.63,29.84],[108.46,29.79],[108.54,30.23],[108.46,30.41],[108.63,30.59],[108.81,30.5],[109.07,30.63],[109.16,30.54],[109.25,30.63],[109.42,30.54],[109.86,30.89],[110.04,30.81],[110.21,31.16]]]}},{"type":"Feature","properties":{"n":"贵州","full":"贵州省","cp":[106.6113,26.9385]},"geometry":{"type":"Polygon","coordinates":[[[104.15,27.25],[104.41,27.47],[104.59,27.33],[105.21,27.38],[105.29,27.73],[105.56,27.77],[105.64,27.64],[106.35,27.82],[106.17,28.12],[105.91,28.12],[105.64,28.43],[106.0,28.74],[106.35,28.52],[106.52,28.56],[106.44,28.78],[106.52,28.78],[106.61,28.65],[106.61,28.52],[106.7,28.48],[106.88,28.78],[107.4,28.87],[107.4,29.18],[107.58,29.22],[107.84,29.14],[107.84,29.0],[108.28,29.09],[108.37,28.65],[108.54,28.65],[108.54,28.39],[108.72,28.48],[108.72,28.21],[109.07,28.21],[109.25,28.48],[109.34,28.26],[109.34,27.91],[109.42,27.6],[108.81,27.11],[108.9,27.03],[109.34,27.16],[109.51,27.03],[109.51,26.81],[109.34,26.72],[109.42,26.59],[109.25,26.32],[109.42,26.28],[109.51,26.02],[109.34,25.71],[108.98,25.75],[109.07,25.53],[108.63,25.58],[108.63,25.31],[108.37,25.53],[108.19,25.44],[108.11,25.22],[107.84,25.14],[107.75,25.22],[107.49,25.22],[107.23,25.62],[106.96,25.49],[107.05,25.27],[106.17,24.96],[106.17,24.79],[106.0,24.65],[105.21,24.96],[104.68,24.61],[104.5,24.74],[104.68,24.96],[104.59,25.05],[104.85,25.22],[104.33,25.71],[104.68,26.41],[104.41,26.67],[103.89,26.54],[103.71,26.76],[103.71,26.98],[103.62,27.03],[103.89,27.42],[104.15,27.25]]]}},{"type":"Feature","properties":{"n":"山东","full":"山东省","cp":[118.7402,36.4307]},"geometry":{"type":"Polygon","coordinates":[[[115.49,36.17],[115.31,36.52],[115.75,36.91],[116.02,37.35],[116.28,37.35],[116.28,37.57],[116.46,37.49],[116.81,37.84],[117.42,37.84],[117.95,38.32],[118.12,38.14],[118.92,38.14],[119.36,37.66],[119.0,37.53],[119.0,37.35],[119.36,37.13],[119.71,37.13],[119.88,37.4],[120.5,37.84],[120.59,38.14],[120.94,38.45],[121.03,37.84],[121.2,37.66],[121.9,37.49],[122.17,37.62],[122.26,37.49],[122.61,37.49],[122.7,37.35],[122.61,36.91],[122.43,36.78],[121.82,36.87],[121.73,36.69],[121.11,36.61],[121.11,36.43],[121.38,36.25],[120.76,36.17],[120.94,35.86],[120.67,36.04],[119.71,35.46],[119.97,34.98],[119.36,35.02],[119.27,35.11],[118.92,35.02],[118.74,34.72],[118.48,34.67],[118.39,34.41],[118.21,34.41],[118.12,34.63],[117.95,34.67],[117.6,34.45],[117.33,34.59],[117.25,34.45],[116.81,34.94],[116.46,34.89],[116.37,34.63],[116.19,34.59],[115.58,34.59],[115.4,34.85],[114.79,35.07],[115.05,35.38],[115.22,35.42],[115.49,35.73],[116.1,36.08],[115.31,35.82],[115.49,36.17]]]}},{"type":"Feature","properties":{"n":"江西","full":"江西省","cp":[116.0156,27.29]},"geometry":{"type":"Polygon","coordinates":[[[114.26,28.34],[114.08,28.56],[114.17,28.83],[113.91,29.05],[114.26,29.36],[114.87,29.4],[115.49,29.79],[115.93,29.71],[116.1,29.84],[116.28,29.79],[116.72,30.06],[116.89,29.93],[116.72,29.75],[116.72,29.62],[117.16,29.71],[117.07,29.84],[117.16,29.93],[117.51,29.62],[118.04,29.58],[118.21,29.4],[118.04,29.18],[118.04,29.05],[118.39,28.78],[118.48,28.3],[118.3,28.08],[117.77,27.82],[117.51,27.99],[116.98,27.64],[117.16,27.29],[117.07,27.11],[116.54,26.81],[116.63,26.46],[116.37,26.24],[116.46,26.1],[116.19,25.88],[116.02,25.27],[115.84,25.22],[115.93,24.92],[115.75,24.79],[115.84,24.57],[115.4,24.79],[114.43,24.52],[114.17,24.7],[114.43,24.96],[114.7,25.14],[114.79,25.27],[114.61,25.4],[113.99,25.27],[113.91,25.44],[113.99,26.06],[114.26,26.15],[113.99,26.19],[114.08,26.59],[113.91,26.63],[113.91,26.94],[113.73,27.11],[113.82,27.29],[113.64,27.38],[113.64,27.6],[113.73,27.95],[114.26,28.34]]]}},{"type":"Feature","properties":{"n":"河南","full":"河南省","cp":[113.0668,33.8818]},"geometry":{"type":"Polygon","coordinates":[[[110.39,34.59],[110.83,34.63],[111.18,34.8],[111.53,34.85],[111.8,35.07],[112.06,35.07],[112.06,35.29],[112.76,35.2],[113.12,35.33],[113.64,35.68],[113.73,36.34],[114.96,36.08],[115.14,36.21],[115.31,36.08],[115.49,36.17],[115.31,35.82],[116.1,36.08],[115.49,35.73],[115.22,35.42],[115.05,35.38],[114.79,35.07],[115.4,34.85],[115.58,34.59],[116.19,34.59],[116.19,34.41],[116.54,34.28],[116.63,33.93],[116.19,33.71],[116.02,33.97],[115.66,34.06],[115.58,33.93],[115.58,33.66],[115.4,33.53],[115.31,33.18],[114.87,33.13],[114.87,33.0],[115.14,32.87],[115.22,32.61],[115.58,32.43],[115.84,32.52],[115.93,31.77],[115.49,31.68],[115.4,31.42],[115.22,31.42],[115.14,31.6],[114.79,31.46],[114.61,31.55],[114.52,31.77],[114.17,31.86],[113.99,31.77],[113.82,31.86],[113.73,32.43],[113.47,32.3],[113.2,32.43],[112.32,32.34],[111.53,32.61],[111.01,33.27],[111.01,33.53],[110.65,33.84],[110.65,34.15],[110.48,34.23],[110.39,34.59]]]}},{"type":"Feature","properties":{"n":"辽宁","full":"辽宁省","cp":[122.0438,41.0889]},"geometry":{"type":"Polygon","coordinates":[[[119.27,41.31],[119.44,41.62],[119.27,41.7],[119.36,42.28],[119.53,42.36],[119.88,42.19],[120.15,41.7],[120.5,42.1],[121.46,42.5],[121.73,42.45],[121.99,42.71],[122.34,42.67],[122.34,42.85],[122.78,42.71],[123.13,42.8],[123.31,42.98],[123.57,43.02],[123.66,43.37],[123.84,43.46],[124.28,43.24],[124.45,42.85],[124.72,43.07],[124.89,43.07],[124.89,42.8],[125.33,42.14],[125.42,42.1],[125.33,41.97],[125.33,41.66],[125.77,41.22],[125.6,40.91],[125.68,40.87],[124.54,40.21],[124.1,39.68],[123.4,39.68],[123.13,39.42],[123.13,39.02],[122.08,39.02],[121.55,38.72],[121.11,38.67],[120.94,38.98],[121.38,39.2],[121.2,39.55],[122.08,40.39],[121.99,40.69],[121.73,40.83],[121.2,40.83],[120.59,40.21],[119.88,39.95],[119.71,40.12],[119.53,40.56],[119.27,40.52],[118.83,40.83],[119.27,41.31]]]}},{"type":"Feature","properties":{"n":"山西","full":"山西省","cp":[112.4121,37.6611]},"geometry":{"type":"Polygon","coordinates":[[[110.92,38.72],[111.18,39.24],[111.09,39.38],[111.36,39.42],[111.45,39.64],[111.97,39.59],[112.32,40.25],[112.76,40.17],[113.2,40.39],[113.55,40.34],[113.82,40.52],[114.08,40.52],[114.08,40.74],[114.26,40.61],[114.35,40.39],[114.52,40.34],[113.99,39.99],[114.35,39.86],[114.52,39.51],[114.35,39.07],[113.91,39.02],[113.82,38.94],[113.82,38.8],[113.55,38.54],[113.55,38.28],[113.82,38.14],[113.99,37.71],[114.17,37.66],[113.73,37.13],[113.73,36.87],[113.47,36.65],[113.73,36.34],[113.64,35.68],[113.12,35.33],[112.76,35.2],[112.06,35.29],[112.06,35.07],[111.8,35.07],[111.53,34.85],[111.18,34.8],[110.83,34.63],[110.39,34.59],[110.21,34.67],[110.21,34.89],[110.57,35.64],[110.39,37.0],[110.83,37.66],[110.48,37.97],[110.48,38.19],[110.83,38.5],[110.92,38.72]]]}},{"type":"Feature","properties":{"n":"安徽","full":"安徽省","cp":[117.2461,32.0361]},"geometry":{"type":"Polygon","coordinates":[[[116.63,33.93],[116.54,34.28],[116.19,34.41],[116.19,34.59],[116.37,34.63],[116.89,34.41],[117.16,34.06],[117.6,34.01],[117.77,33.71],[118.12,33.75],[117.95,33.22],[118.04,33.13],[118.21,33.22],[118.3,32.78],[118.74,32.74],[118.92,32.96],[119.18,32.83],[119.18,32.48],[118.56,32.56],[118.65,32.21],[118.48,32.17],[118.39,31.95],[118.92,31.55],[118.74,31.38],[118.83,31.25],[119.36,31.29],[119.44,31.16],[119.62,31.11],[119.62,31.07],[119.44,30.67],[119.27,30.63],[119.36,30.41],[118.92,30.32],[118.92,29.97],[118.74,29.71],[118.21,29.4],[118.04,29.58],[117.51,29.62],[117.16,29.93],[117.07,29.84],[117.16,29.71],[116.72,29.62],[116.72,29.75],[116.89,29.93],[116.72,30.06],[116.28,29.79],[116.1,29.84],[116.1,30.19],[115.75,30.67],[116.02,31.03],[115.58,31.2],[115.4,31.42],[115.49,31.68],[115.93,31.77],[115.84,32.52],[115.58,32.43],[115.22,32.61],[115.14,32.87],[114.87,33.0],[114.87,33.13],[115.31,33.18],[115.4,33.53],[115.58,33.66],[115.58,33.93],[115.66,34.06],[116.02,33.97],[116.19,33.71],[116.63,33.93]]]}},{"type":"Feature","properties":{"n":"福建","full":"福建省","cp":[118.3008,25.9277]},"geometry":{"type":"Polygon","coordinates":[[[118.48,28.3],[118.83,28.26],[118.74,28.04],[118.92,27.47],[119.27,27.42],[119.62,27.69],[119.79,27.29],[120.23,27.42],[120.41,27.16],[120.76,27.03],[120.67,26.89],[120.23,26.85],[120.23,26.72],[120.41,26.67],[120.5,26.37],[120.23,26.28],[120.41,26.15],[120.06,26.19],[119.97,25.93],[119.79,25.93],[119.97,25.4],[119.53,25.14],[119.44,25.0],[119.27,25.09],[118.92,24.83],[118.65,24.52],[118.48,24.52],[118.48,24.43],[118.21,24.35],[118.21,24.17],[117.86,23.99],[117.77,23.77],[117.51,23.6],[117.16,23.55],[116.98,23.91],[116.98,24.17],[116.72,24.65],[116.54,24.61],[116.37,24.87],[116.28,24.79],[115.93,24.92],[115.84,25.22],[116.02,25.27],[116.19,25.88],[116.46,26.1],[116.37,26.24],[116.63,26.46],[116.54,26.81],[117.07,27.11],[117.16,27.29],[116.98,27.64],[117.51,27.99],[117.77,27.82],[118.3,28.08],[118.48,28.3]]]}},{"type":"Feature","properties":{"n":"浙江","full":"浙江省","cp":[120.498,29.0918]},"geometry":{"type":"Polygon","coordinates":[[[118.21,29.4],[118.74,29.71],[118.92,29.97],[118.92,30.32],[119.36,30.41],[119.27,30.63],[119.44,30.67],[119.62,31.11],[119.97,31.16],[120.5,30.81],[120.94,31.03],[121.29,30.67],[122.7,30.89],[122.87,30.72],[122.96,30.15],[122.61,30.1],[122.61,29.93],[122.17,29.53],[122.34,28.87],[121.99,28.87],[121.99,28.43],[121.73,28.34],[121.73,28.21],[121.46,28.21],[121.55,28.04],[121.29,27.95],[121.11,27.42],[120.67,27.33],[120.67,27.16],[120.94,27.03],[120.76,27.03],[120.41,27.16],[120.23,27.42],[119.79,27.29],[119.62,27.69],[119.27,27.42],[118.92,27.47],[118.74,28.04],[118.83,28.26],[118.48,28.3],[118.39,28.78],[118.04,29.05],[118.04,29.18],[118.21,29.4]]]}},{"type":"Feature","properties":{"n":"江苏","full":"江苏省","cp":[118.8586,32.915]},"geometry":{"type":"Polygon","coordinates":[[[116.37,34.63],[116.46,34.89],[116.81,34.94],[117.25,34.45],[117.33,34.59],[117.6,34.45],[117.95,34.67],[118.12,34.63],[118.21,34.41],[118.39,34.41],[118.48,34.67],[118.74,34.72],[118.92,35.02],[119.27,35.11],[119.36,35.02],[119.36,34.85],[119.71,34.59],[120.32,34.37],[120.94,33.05],[121.03,32.65],[121.38,32.48],[121.46,32.17],[121.9,31.99],[121.99,31.6],[121.2,31.86],[121.11,31.73],[121.38,31.51],[121.2,31.46],[120.94,31.03],[120.5,30.81],[119.97,31.16],[119.62,31.11],[119.44,31.16],[119.36,31.29],[118.83,31.25],[118.74,31.38],[118.92,31.55],[118.39,31.95],[118.48,32.17],[118.65,32.21],[118.56,32.56],[119.18,32.48],[119.18,32.83],[118.92,32.96],[118.74,32.74],[118.3,32.78],[118.21,33.22],[118.04,33.13],[117.95,33.22],[118.12,33.75],[117.77,33.71],[117.6,34.01],[117.16,34.06],[116.89,34.41],[116.37,34.63]]]}},{"type":"Feature","properties":{"n":"重庆","full":"重庆市","cp":[107.7539,30.1904]},"geometry":{"type":"Polygon","coordinates":[[[108.54,31.68],[108.28,31.9],[108.37,32.17],[108.54,32.21],[109.07,31.95],[109.25,31.73],[109.78,31.68],[109.69,31.55],[110.13,31.38],[110.21,31.16],[110.04,30.81],[109.86,30.89],[109.42,30.54],[109.25,30.63],[109.16,30.54],[109.07,30.63],[108.81,30.5],[108.63,30.59],[108.46,30.41],[108.54,30.23],[108.46,29.79],[108.63,29.84],[108.98,29.31],[109.07,29.36],[109.25,29.14],[109.25,28.48],[109.07,28.21],[108.72,28.21],[108.72,28.48],[108.54,28.39],[108.54,28.65],[108.37,28.65],[108.28,29.09],[107.84,29.0],[107.84,29.14],[107.58,29.22],[107.4,29.18],[107.4,28.87],[106.88,28.78],[106.7,28.48],[106.61,28.52],[106.61,28.65],[106.52,28.78],[106.44,28.78],[106.52,28.56],[106.35,28.52],[106.26,28.87],[105.82,28.96],[105.73,29.27],[105.47,29.31],[105.29,29.53],[105.73,29.88],[105.56,30.1],[105.64,30.28],[105.82,30.45],[106.26,30.19],[106.61,30.32],[106.79,30.01],[107.05,30.01],[107.49,30.63],[107.4,30.76],[107.49,30.85],[107.93,30.85],[108.19,31.51],[108.54,31.68]]]}},{"type":"Feature","properties":{"n":"宁夏","full":"宁夏回族自治区","cp":[105.9961,37.3096]},"geometry":{"type":"Polygon","coordinates":[[[104.33,37.44],[105.82,37.79],[105.91,38.72],[106.35,39.29],[106.79,39.38],[106.96,38.98],[106.52,38.32],[106.79,38.19],[107.31,38.1],[107.67,37.88],[107.31,37.62],[107.31,37.09],[106.61,37.09],[106.61,36.78],[106.44,36.56],[106.52,36.47],[106.52,36.25],[106.88,36.12],[106.96,35.82],[106.7,35.68],[106.44,35.68],[106.52,35.33],[106.35,35.24],[106.26,35.42],[106.08,35.38],[106.0,35.42],[106.08,35.46],[105.82,35.55],[105.73,35.73],[105.38,35.77],[105.29,35.99],[105.47,36.12],[105.21,36.69],[105.29,36.83],[104.85,37.22],[104.59,37.22],[104.59,37.44],[104.33,37.44]]]}},{"type":"Feature","properties":{"n":"海南","full":"海南省","cp":[109.9512,19.2041]},"geometry":{"type":"Polygon","coordinates":[[[108.63,19.38],[109.07,19.64],[109.25,19.95],[109.6,20.04],[110.04,20.13],[110.39,20.13],[110.57,20.26],[110.65,20.26],[111.09,19.95],[111.27,20.0],[110.65,19.16],[110.57,18.68],[110.21,18.59],[110.04,18.37],[109.86,18.37],[109.69,18.11],[108.98,18.28],[108.63,18.46],[108.63,19.38]]]}},{"type":"Feature","properties":{"n":"台湾","full":"台湾省","cp":[120.0254,23.5986]},"geometry":{"type":"Polygon","coordinates":[[[121.9,25.05],[121.99,25.0],[121.82,24.74],[121.9,24.57],[121.64,24.04],[121.38,23.12],[121.03,22.68],[120.85,22.06],[120.76,21.93],[120.67,22.32],[120.23,22.59],[120.06,23.07],[120.15,23.69],[121.03,25.05],[121.55,25.31],[121.9,25.05]]]}},{"type":"Feature","properties":{"n":"北京","full":"北京市","cp":[116.4551,40.2539]},"geometry":{"type":"Polygon","coordinates":[[[117.42,40.21],[117.25,40.08],[116.81,39.99],[116.89,39.81],[116.89,39.68],[116.81,39.59],[116.54,39.59],[116.37,39.46],[116.19,39.59],[115.75,39.51],[115.49,39.64],[115.4,39.95],[115.93,40.25],[115.75,40.56],[116.1,40.61],[116.19,40.78],[116.46,40.78],[116.37,40.91],[116.63,41.04],[116.98,40.69],[117.42,40.65],[117.25,40.52],[117.42,40.21]]]}},{"type":"Feature","properties":{"n":"天津","full":"天津市","cp":[117.4219,39.4189]},"geometry":{"type":"Polygon","coordinates":[[[116.81,39.59],[116.89,39.68],[117.16,39.64],[117.16,39.81],[117.25,40.08],[117.42,40.21],[117.69,40.08],[117.69,39.99],[117.51,39.99],[117.51,39.77],[117.69,39.59],[117.95,39.59],[117.86,39.42],[118.04,39.24],[118.04,39.2],[117.86,39.11],[117.6,38.63],[117.25,38.54],[116.72,38.8],[116.72,38.94],[116.89,39.11],[116.81,39.59]]]}},{"type":"Feature","properties":{"n":"上海","full":"上海市","cp":[121.4648,31.2891]},"geometry":{"type":"Polygon","coordinates":[[[120.94,31.03],[121.2,31.46],[121.38,31.51],[121.11,31.73],[121.2,31.86],[121.99,31.6],[121.9,31.16],[121.99,30.81],[121.29,30.67],[120.94,31.03]]]}},{"type":"Feature","properties":{"n":"香港","full":"香港特别行政区","cp":[114.1178,22.3242]},"geometry":{"type":"Polygon","coordinates":[[[114.61,22.41],[114.52,22.15],[113.91,22.15],[113.82,22.19],[113.91,22.41],[114.17,22.54],[114.43,22.54],[114.43,22.41],[114.61,22.41]]]}},{"type":"Feature","properties":{"n":"澳门","full":"澳门特别行政区","cp":[111.5547,22.1484]},"geometry":{"type":"Polygon","coordinates":[[[113.6,22.16],[113.61,22.13],[113.55,22.11],[113.54,22.2],[113.58,22.2],[113.6,22.16]]]}}]};
+const reduce = window.matchMedia('(prefers-reduced-motion:reduce)').matches;
+
+/* ===================== camps ===================== */
+const CAMPS = {
+  qin:   {label:'压扁的弱 · 秦晖',     color:'#C0433A', q:'宗族是被国家压扁的「涂层」——真正碾压个体的是直辖编户的大共同体(国家)。'},
+  south: {label:'国家化的强 · 华南学派', color:'#2C8FB0', q:'宗族是被「国家化」的真实实体——地方靠「做宗族」主动接入帝国正统秩序。'},
+  quant: {label:'反噬国家 · 英文量化派', color:'#46A074', q:'宗族强到能反噬国家——宋以后是「强社会·弱国家」,量化数据反复确认其韧性与边界。'},
+  adj:   {label:'邻近理论',           color:'#CBA15E', q:'相邻的对话者:个体化、远程治理、社会流动——为这场争论提供机制与当代延长线。'},
+  region:{label:'区域民族志',          color:'#A672B0', q:'走出华南,沿农村·城市·传统·民俗,把同一套"国家—地方"追问铺满全中国。'},
+};
+
+/* ===================== motifs (inline SVG, tinted by accent) ===================== */
+function motif(id){
+  const s='stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"';
+  const M={
+    roofline:`<path ${s} d="M8 60 L70 60 M14 60 L14 44 L66 44 L66 60 M6 44 Q40 24 74 44 M40 24 L40 16"/>`,
+    mountain:`<path ${s} d="M4 62 L30 24 L46 46 L60 28 L78 62 Z M30 24 L38 36"/>`,
+    water:`<path ${s} d="M6 30 Q20 18 34 30 T62 30 M6 44 Q20 32 34 44 T62 44 M6 58 Q20 46 34 58 T62 58"/>`,
+    boat:`<path ${s} d="M10 52 L72 52 L62 64 L20 64 Z M40 52 L40 16 M40 20 L64 34 L40 38"/>`,
+    network:`<circle ${s} cx="16" cy="22" r="5"/><circle ${s} cx="64" cy="20" r="5"/><circle ${s} cx="40" cy="56" r="6"/><path ${s} d="M20 26 L36 52 M60 24 L44 52 M21 22 L59 21"/>`,
+    scroll:`<path ${s} d="M18 14 L62 14 L62 66 L18 66 Z M26 28 L54 28 M26 38 L54 38 M26 48 L46 48"/>`,
+    field:`<path ${s} d="M6 60 L74 60 M16 60 L20 30 M32 60 L34 30 M48 60 L46 30 M64 60 L60 30 M12 30 L68 30"/>`,
+    tea:`<path ${s} d="M20 34 L60 34 L55 58 L25 58 Z M60 38 Q72 38 70 48 Q68 54 58 52 M30 26 Q34 20 38 26 M44 26 Q48 20 52 26"/>`,
+    snow:`<path ${s} d="M40 12 L40 64 M16 26 L64 50 M64 26 L16 50 M34 18 L40 24 L46 18 M34 58 L40 52 L46 58"/>`,
+    tree:`<path ${s} d="M40 64 L40 20 M40 30 L24 18 M40 30 L56 18 M40 44 L26 34 M40 44 L54 34"/><circle ${s} cx="40" cy="16" r="4"/>`,
+  };
+  return `<svg viewBox="0 0 80 76" xmlns="http://www.w3.org/2000/svg" style="color:#fff">${M[id]||M.roofline}</svg>`;
+}
+
+/* ===================== scholars (21) ===================== */
+const PINS = [
+ /* ---- 秦晖 ---- */
+ {id:'qinhui',era:'zhouqin',camp:'qin',name:'秦晖',en:'Qin Hui',years:'《传统十论》· 大共同体本位',
+  lat:34.30,lng:108.95,zoom:5,acc:'#B5793A',locale:'关中 · 黄土高原',motif:'mountain',
+  line:'编户齐民:国家直辖原子化个体,宗族只是"涂层"。',
+  thesis:'自秦起,中国是「大共同体本位」:商鞅的分异令、什伍连坐、郡县制把人口逐户编入国家、原子化为彼此平等(平等地无权)的纳税服役单位。真正碾压个体的不是宗族这类小共同体,而是能直辖到每一户的专制国家——宗族话语多是「儒表法里」的道德涂层。',
+  method:'宏观制度演绎 + 中西类型学比较(小共同体 / 大共同体 / 个人本位);上溯"周秦之变"。',
+  dialogue:'与华南学派正面相对:他说宗族「虚」,华南说宗族「实」;也是量化派"强社会弱国家"命题的镜像对立面。其"伪个人主义"恰回响阎云翔的"顺从"。',
+  controversy:'把秦汉唐宋明清压成一个"秦制"常量,被批抹平差异;论述带鲜明的自由主义当代关怀。',
+  refs:[{c:'秦晖. 2003. <i>传统十论:本土社会的制度、文化及其变革</i>. 上海:复旦大学出版社.',u:'https://search.worldcat.org/search?q=传统十论+秦晖'}]},
+
+ /* ---- 华南学派 ---- */
+ {id:'faure',era:'jiajing',camp:'south',name:'科大卫',en:'David Faure',years:'Emperor and Ancestor · 2007',
+  lat:23.13,lng:113.26,zoom:8,acc:'#3E8C9A',locale:'岭南 · 珠江三角洲',motif:'roofline',
+  line:'宗族是明嘉靖后的"历史建构",是地方"国家化"的载体。',
+  thesis:'珠三角强宗族主要兴起于明嘉靖「大礼议」之后——礼制松动让庶民也获得建祠、追祭始祖的合法性。所以"古老"的祠堂其实是晚近的制度发明;地方"做宗族、行《家礼》、攀附中原祖先、考功名",正是把自己接入帝国正统的过程,即「地方社会的国家化」。',
+  method:'历史人类学,"进村找庙,进庙找碑";族谱、碑刻、契约 + 田野。提出"礼仪标识"概念。',
+  dialogue:'反弗里德曼(宗族非移民工具,而是本地人主动融入);把秦晖的"涂层"翻案为"有实体的国家化机制"——但"国家主导"这一底色,他与秦晖其实共享。',
+  controversy:'强宗族"晚近建构"的判断,与把宗族当跨两千年常量来谈的视角直接冲突。',
+  refs:[{c:'Faure, David. 2007. <i>Emperor and Ancestor: State and Lineage in South China</i>. Stanford, CA: Stanford University Press.',u:'https://www.sup.org/books/title/?id=8050'}]},
+
+ {id:'liu',era:'jiajing',camp:'south',name:'刘志伟',en:'Liu Zhiwei',years:'《在国家与社会之间》',
+  lat:22.55,lng:113.40,zoom:8,acc:'#3E8C9A',locale:'岭南 · 沙田',motif:'water',
+  line:'户籍之"户"多是纳税的"财政虚构"。',
+  thesis:'明清广东的里甲赋役里,许多"户"根本不是真实家庭,而是宗族用来纳税的「财政虚构(fiscal fiction)」;珠三角的沙田经济正是通过宗族族产组织的。编户作为财政—行政范畴确实存在,却被地方宗族主动利用、操纵、绕着它建构自己。',
+  method:'赋役制度史(承梁方仲、傅衣凌一脉)+ 田野;中山大学历史人类学中心。',
+  dialogue:'直戳秦晖的"编户齐民":编户是真,但不是把真人原子化的铁板——原子化的图景在华南地面上不成立。',
+  controversy:'"户=虚构"提示制度设计与社会实践之间的落差,挑战从纸面制度直推社会现实的做法。',
+  refs:[{c:'刘志伟. 1997. <i>在国家与社会之间:明清广东里甲赋役制度研究</i>. 广州:中山大学出版社.',u:'http://www.zsupress.com/'}]},
+
+ {id:'siu',era:'reform',camp:'south',name:'萧凤霞',en:'Helen F. Siu',years:'Agents and Victims · 1989',
+  lat:22.52,lng:113.39,zoom:9,acc:'#3E8C9A',locale:'岭南 · 中山小榄 → 印度洋',motif:'boat',
+  line:'反施坚雅;"能动者与受害者";走向印度洋的"中国南"。',
+  thesis:'她以小榄菊花会研究指出:施坚雅用可计算距离的市场层级解释中国社会结构,忽略了市场是在一个社会分化、权力机会不平等、充满文化歧视的脉络里运作的。地方人不只是被国家碾压的 victim,也是主动操作规则的 agent。近年田野从新会、中山一路推向印度洋、中东、非洲——一个"更宽广的中国南"。',
+  method:'历史人类学,长时段田野;与政治人类学家 James Scott(《弱者的武器》)在耶鲁同侪、同读书组。',
+  dialogue:'为"地方能动性(agency)"正名,与秦晖刚性的"国家直辖、个体无处可逃"图景相对;与斯科特的庶民抵抗同频。',
+  controversy:'"自下而上"的取向被质疑难以回答"中国整体结构性命运"这类大问题。',
+  refs:[{c:'Siu, Helen F. 1989. <i>Agents and Victims in South China: Accomplices in Rural Revolution</i>. New Haven, CT: Yale University Press.',u:'https://yalebooks.yale.edu/book/9780300045970/agents-and-victims-in-south-china/'}]},
+
+ {id:'zheng',era:'jiajing',camp:'south',name:'郑振满',en:'Zheng Zhenman',years:'Family Lineage Organization · 闽',
+  lat:25.43,lng:119.01,zoom:8,acc:'#C0543C',locale:'福建 · 莆田',motif:'roofline',
+  line:'闽地宗族:从"继承式"到"合同式"再到"依附式"。',
+  thesis:'明清福建的家族组织并非铁板一块的血缘体,而随社会经济变迁演化出不同形态——继承式、合同式、依附式宗族。宗族建构与赋役制度、土地开发、商业网络深度缠绕。这把"华南学派"的洞见从珠三角推进到闽地,证明"宗族是被建构的制度实体"具有跨区域的一般性。',
+  method:'历史人类学 + 民间文献(族谱、契约、碑刻);厦门大学—中山大学一脉。',
+  dialogue:'华南学派核心成员,与科大卫、刘志伟共构"宗族是制度实体"的论证;把"国家化"叙事拓展到福建。',
+  controversy:'宗族形态的类型学划分,在不同区域的适用边界仍有讨论。',
+  refs:[{c:'Zheng, Zhenman. 2001. <i>Family Lineage Organization and Social Change in Ming and Qing Fujian</i>. Translated by Michael Szonyi. Honolulu: University of Hawai\u2019i Press.',u:'https://uhpress.hawaii.edu/title/family-lineage-organization-and-social-change-in-ming-and-qing-fujian/'},{c:'郑振满. 1992. <i>明清福建家族组织与社会变迁</i>. 长沙:湖南教育出版社.',u:'https://search.worldcat.org/search?q=明清福建家族组织与社会变迁'}]},
+
+ /* ---- 英文量化派 ---- */
+ {id:'yuhuawang',era:'tangsong',camp:'quant',name:'王裕华',en:'Yuhua Wang',years:'Rise & Fall of Imperial China · APSR 2022',
+  lat:34.27,lng:108.95,zoom:6,acc:'#C08A4A',locale:'长安—开封 · 中原',motif:'network',
+  line:'主权者困境;宋后"强社会弱国家",宗族架空国家。',
+  thesis:'「主权者困境」:能集体强化国家的精英,也有能力推翻君主——于是短命皇帝往往治强国、长命皇帝治弱国。精英网络由唐的"星形"(强国家弱社会)塌缩为宋—清的"领结"(强社会弱国家):科举任贤后,精英不再跨省联姻,转而守护家乡地盘、用职位压低税收、以宗族替代国家。',
+  method:'量化历史政治经济学;以精英"联姻网络的地理跨度"做自变量,辅以墓志铭/官员数据;唐宋变革论的形式化与再检验。',
+  dialogue:'用数据颠覆秦晖的"强国家"——宋后中国长期"强社会弱国家",其"持久"恰建立在与地方宗族妥协之上;更支持华南"宗族是实体"一边,但多走一步:这实体反噬了国家。',
+  controversy:'"网络拓扑"(星形/领结/环形)模型被质疑在自然界与历史中缺乏现实对应物。',
+  refs:[{c:'Wang, Yuhua. 2022. <i>The Rise and Fall of Imperial China: The Social Origins of State Development</i>. Princeton, NJ: Princeton University Press.',u:'https://press.princeton.edu/books/hardcover/9780691215174/the-rise-and-fall-of-imperial-china'},{c:'Wang, Yuhua. 2022. \u201cBlood Is Thicker than Water: Elite Kinship Networks and State Building in Imperial China.\u201d <i>American Political Science Review</i> 116(3):896\u2013910.',u:'https://doi.org/10.1017/S0003055421001490'}]},
+
+ {id:'pnas',era:'tangsong',camp:'quant',name:'Wen·Wang·Hout',en:'PNAS 2024',years:'唐代社会流动',
+  lat:34.05,lng:109.30,zoom:6,acc:'#C08A4A',locale:'唐 · 长安',motif:'scroll',
+  line:'科举↑、门第↓ → 唐代社会流动性↑。',
+  thesis:'随科举兴起、贵族门第衰落,唐代(618–907)的社会流动性上升。研究用唐代墓志铭数据构造流动表来测量——把"地位的代际传递"放进可计算的框架,为唐宋变革论提供量化支撑。',
+  method:'唐代墓志铭 → 社会流动表;与社会分层量化大家 Michael Hout 合作,标志"中国历史流动"进入社会学量化主流。',
+  dialogue:'接 Clark《姓氏与社会流动》与周翔-谢宇的流动研究;为"宗族作为流动的制度载体"提供历史量化证据;若流动率随科举而变,则 Clark 的"恒定 b"在中国要打折。',
+  controversy:'从历史文本(墓志铭)构造流动表,样本选择性与代表性是方法上的关键审视点。',
+  refs:[{c:'Wen, Fangqi, Erik H. Wang, and Michael Hout. 2024. \u201cSocial Mobility in the Tang Dynasty as the Imperial Examination Rose and Aristocratic Family Pedigree Declined, 618\u2013907 CE.\u201d <i>Proceedings of the National Academy of Sciences</i> 121(4).',u:'https://doi.org/10.1073/pnas.2305564121'}]},
+
+ {id:'peng',era:'reform',camp:'quant',name:'彭玉生',en:'Yusheng Peng',years:'AJS 2004 · AJS 2010 · 366 村',
+  lat:35.20,lng:115.50,zoom:6,acc:'#C9A23F',locale:'华北 · 乡村(366 村)',motif:'field',
+  line:'宗族网络能"弯折正式制度的铁条"。',
+  thesis:'两项基于 366 个村庄的量化研究:其一,宗族网络强的村庄,私营企业的数量与规模都显著更高——在正式产权法失效的改革初期,宗族的"规范能力"替国家保护了产权、降低了交易成本;其二,在计划生育与"传宗接代"规范正面冲突时,宗族强的村庄生育率更高。社会网络能"弯折"正式制度的铁条。',
+  method:'村级量化数据 + 新制度主义 / 社会网络分析;正式 vs 非正式制度的"规范主义·法条主义·一致·冲突"四象限框架。',
+  dialogue:'用硬数据为"宗族是有实体的规范力量"作证,呼应华南学派;也量化了宗族对国家政策(计划生育)的抵抗与"弯折"。',
+  controversy:'以族谱数量等代理测量宗族强度,内生性争议大。',
+  refs:[{c:'Peng, Yusheng. 2004. \u201cKinship Networks and Entrepreneurs in China\u2019s Transitional Economy.\u201d <i>American Journal of Sociology</i> 109(5):1045\u201374.',u:'https://doi.org/10.1086/382347'},{c:'Peng, Yusheng. 2010. \u201cWhen Formal Laws and Informal Norms Collide: Lineage Networks versus Birth Control Policy in China.\u201d <i>American Journal of Sociology</i> 116(3):770\u2013805.',u:'https://doi.org/10.1086/657102'}]},
+
+ {id:'lutao',era:'reform',camp:'quant',name:'Lu & Tao',en:'AJS 2017',years:'宗族 · 集体行动',
+  lat:33.20,lng:116.60,zoom:6,acc:'#C9A23F',locale:'华北/华中 · 乡村',motif:'field',
+  line:'宗族是动员结构,却受制于与国家的纵向缺口。',
+  thesis:'宗族群体可充当集体抵抗的"动员结构",但因非正式地位、与国家缺乏纵向联系而成效有限;反而是与官方关系密切、又保有自主的老年人协会,成了政府与受冤公民之间真正的中介,从而压制了抵抗。组织与国家的"连接方式"决定了集体行动的发生与成败。',
+  method:'量化 + 质性;比较不同组织(非正式宗族 / 半自治公民团体)在集体行动不同阶段的作用。',
+  dialogue:'用数据确认"宗族非自治堡垒"(与秦晖判断意外一致),却给出了更细的机制:不是宗族强不强,而是它与国家如何连接。',
+  controversy:'抵抗"成败"的测量与因果识别,是此类研究的难点。',
+  refs:[{c:'Lu, Yao, and Ran Tao. 2017. \u201cOrganizational Structure and Collective Action: Lineage Networks, Semiautonomous Civic Associations, and Collective Resistance in Rural China.\u201d <i>American Journal of Sociology</i> 122(6):1726\u201374.',u:'https://doi.org/10.1086/691346'}]},
+
+ {id:'rice',era:'zhouqin',camp:'quant',name:'稻作—小麦假说',en:'Talhelm et al. 2014',years:'Science · 南稻北麦',
+  lat:32.50,lng:116.50,zoom:6,acc:'#5FA06A',locale:'南稻北麦 · 淮河线',motif:'field',
+  line:'种水稻 vs 种小麦,塑造了集体 vs 个体取向。',
+  thesis:'同在汉族内部,长江以南的水稻区比北方小麦区更"集体主义"、更整体性思维——因为稻作需要协作灌溉与换工,把人绑进相互依赖的网络;旱作小麦则更"单干"。一条淮河,把中国分成了两种心理地理。近年研究进一步提出:历史"宗族强度"中介着到北京距离与当代个人/集体主义(HSSC 2026;Gong et al. 2021 的县级证据)。',
+  method:'跨区域社会心理实验 + 农业地理;以稻/麦种植比例、距省界等做识别。',
+  dialogue:'把"个人/集体主义"从文化本质论改写为可测的生态—制度产物;与宗族研究合流——稻作协作与宗族网络,都是"把个体织进集体"的机制。',
+  controversy:'生态决定论的因果强度、以及实验指标的效度,均有争议。',
+  refs:[{c:'Talhelm, T., X. Zhang, S. Oishi, C. Shimin, D. Duan, X. Lan, and S. Kitayama. 2014. \u201cLarge-Scale Psychological Differences within China Explained by Rice versus Wheat Agriculture.\u201d <i>Science</i> 344(6184):603\u20138.',u:'https://doi.org/10.1126/science.1246850'}]},
+
+ /* ---- 邻近理论 ---- */
+ {id:'yan',era:'reform',camp:'adj',name:'阎云翔',en:'Yan Yunxiang',years:'下岬村 · 个体化',
+  lat:46.60,lng:126.50,zoom:6,acc:'#6E8FA6',locale:'东北 · 黑龙江下岬村',motif:'snow',
+  line:'"强制性个体化";所谓个人主义其实是顺从。',
+  thesis:'中国式个体化是贝克意义上的"强制性个体化":个体被从单位/集体里"切下来",却没有西方式的权利保护;为谋生又被重新嵌入关系网络。于是所谓"个人主义"其实是 a species of conformity(一种顺从)。但他只是指出了顺从,没说清顺从由何种机制产生。',
+  method:'民族志(黑龙江下岬村长期田野)。',
+  dialogue:'他留下的"顺从如何产生"空白,正是秦晖(结构:无中间团体的赤裸暴露)与福柯(规训)能补的——这是整场讨论的第一个引子。',
+  controversy:'从第二序现代化(贝克)起步,被批错过第一序理论家(涂尔干、福柯)对机制的洞见。',
+  refs:[{c:'Yan, Yunxiang. 2003. <i>Private Life under Socialism: Love, Intimacy, and Family Change in a Chinese Village, 1949\u20131999</i>. Stanford, CA: Stanford University Press.',u:'https://www.sup.org/books/title/?id=2058'},{c:'Yan, Yunxiang. 2009. <i>The Individualization of Chinese Society</i>. Oxford: Berg.',u:'https://www.bloomsbury.com/us/individualization-of-chinese-society-9781847883773/'}]},
+
+ {id:'ong',era:'reform',camp:'adj',name:'Ong & Zhang',en:'Aihwa Ong & Li Zhang',years:'Privatizing China · 远程治理',
+  lat:24.88,lng:102.83,zoom:7,acc:'#C0683C',locale:'西南 · 昆明',motif:'roofline',
+  line:'"远程治理":国家后撤让人自管,却随时介入。',
+  thesis:'后毛个体被夹在"新自由主义市场逻辑"与"社会主义主权"之间。「远程治理(governing at a distance)」——国家后撤、保持距离,让个体自我管理、自我负责,却随时准备介入划界;由此反驳"经济自由化必致政治自由化"。Ong 另提"梯度主权":对不同人群、分区选择性地使用治理逻辑。张鹂的昆明住房研究则展示中产如何在市场中自我塑造。',
+  method:'城市人类学(昆明住房、温州民企)+ 批判政治经济学。',
+  dialogue:'与华南"国家通过地方制度治理"同构;"梯度主权"正对应 hukou 分层治理——同一套技术落到不同户籍人群,产生分层效果。',
+  controversy:'"放手即控制"的判断,在自由主义与威权语境下含义不同,需区分是否受法治约束。',
+  refs:[{c:'Zhang, Li, and Aihwa Ong, eds. 2008. <i>Privatizing China: Socialism from Afar</i>. Ithaca, NY: Cornell University Press.',u:'https://www.cornellpress.cornell.edu/book/9780801474040/privatizing-china/'},{c:'Zhang, Li. 2010. <i>In Search of Paradise: Middle-Class Living in a Chinese Metropolis</i>. Ithaca, NY: Cornell University Press.',u:'https://www.cornellpress.cornell.edu/book/9780801448348/in-search-of-paradise/'}]},
+
+ {id:'clark',era:'reform',camp:'adj',name:'Gregory Clark',en:'The Son Also Rises',years:'姓氏法 · 比较参照',
+  lat:37.60,lng:119.20,zoom:5,acc:'#C9A85E',locale:'比较参照 · 跨国',motif:'tree',
+  line:'姓氏测流动:社会流动率近似恒定(高 b)。',
+  thesis:'《姓氏与社会流动》用姓氏频率测代际地位,主张社会流动率在各社会、各时代近似恒定(地位持久性 b 很高)。这一"常数 b"曾被本对话以多尺度演化视角(G×E 交互、波动选择)质疑——把生物学的恒定假设搬到社会过程未必成立。',
+  method:'姓氏频率法、跨国与跨时段比较。',
+  dialogue:'量化派的"宗族×流动"为其在华机制提供制度载体;Wen-Wang-Hout 的唐代流动是其历史对照——若流动率随科举而变,则"恒定 b"在中国就要打折。',
+  controversy:'姓氏法测得的"高持久性"是否高估了真实的地位继承,争议很大。',
+  refs:[{c:'Clark, Gregory. 2014. <i>The Son Also Rises: Surnames and the History of Social Mobility</i>. Princeton, NJ: Princeton University Press.',u:'https://press.princeton.edu/books/hardcover/9780691162546/the-son-also-rises'}]},
+
+ /* ---- 区域民族志 ---- */
+ {id:'duara',era:'reform',camp:'region',name:'杜赞奇',en:'Prasenjit Duara',years:'Culture, Power, and the State · 1988',
+  lat:37.50,lng:115.50,zoom:6,acc:'#C9A23F',locale:'华北平原 · 河北山东',motif:'field',
+  line:'"权力的文化网络"与"国家政权内卷化"。',
+  thesis:'20 世纪上半叶华北乡村里,市场、宗族、水利、庙宇等结构交叠成「权力的文化网络(cultural nexus of power)」,乡村领袖依托它获得正当性。而现代国家强行下沉、用"营利型经纪"取代"保护型经纪",反而瓦解了这张网络——国家扩张非但没增强治理,还造成"国家政权内卷化(state involution)",埋下革命的种子。',
+  method:'社会史 + 满铁调查资料;"文化网络""经纪体制""内卷化"概念框架。',
+  dialogue:'与秦晖"国家直辖、所向披靡"相反:它揭示国家下沉如何破坏地方网络、反噬自身;与王裕华"国家能力"叙事在"国家其实脆弱"上呼应。',
+  controversy:'"内卷化"概念后被广泛借用甚至滥用,其原始边界值得回到文本厘清。',
+  refs:[{c:'Duara, Prasenjit. 1988. <i>Culture, Power, and the State: Rural North China, 1900\u20131942</i>. Stanford, CA: Stanford University Press.',u:'https://www.sup.org/books/title/?id=2351'}]},
+
+ {id:'scott',era:'zhouqin',camp:'region',name:'斯科特',en:'James C. Scott',years:'The Art of Not Being Governed · 2009',
+  lat:25.00,lng:103.00,zoom:5,acc:'#2F7A52',locale:'西南山地 · Zomia',motif:'mountain',
+  line:'山地是"逃避统治的艺术";Zomia 的反国家史。',
+  thesis:'横跨东南亚高地、含云南贵州川西的"Zomia",一亿山地居民两千年来主动"逃避统治":刀耕火种、无文字、平权、先知起义,样样都是为了与谷地国家保持距离。把国家建构读作"内部殖民",把"野蛮"读作策略性的 state evasion——一部从无国家者视角写的反向文明史。',
+  method:'政治人类学 / 农业史;比较生态与统治技术(可榨取性、可达性)。',
+  dialogue:'把"远程治理""国家化"反过来看:不是国家如何收编地方,而是地方如何逃逸国家。与编户齐民构成最尖锐的对照——有人被编入,有人逃进山。',
+  controversy:'"刻意逃避"的能动性是否被过度浪漫化、Zomia 边界是否过宽,争议很大。',
+  refs:[{c:'Scott, James C. 2009. <i>The Art of Not Being Governed: An Anarchist History of Upland Southeast Asia</i>. New Haven, CT: Yale University Press.',u:'https://yalebooks.yale.edu/book/9780300169171/the-art-of-not-being-governed/'}]},
+
+ {id:'mueggler',era:'reform',camp:'region',name:'Erik Mueggler',en:'Erik Mueggler',years:'The Age of Wild Ghosts · 2001',
+  lat:26.00,lng:101.50,zoom:7,acc:'#2F7A52',locale:'云南 · 彝',motif:'mountain',
+  line:'"野鬼的年代":国家暴力如何刻进地方记忆与仪式。',
+  thesis:'云南一个彝族社区里,大跃进与饥荒的创伤、毛时代国家暴力的记忆,被编织进当地的"野鬼"观念、仪式与空间之中。国家不是抽象的制度,而是以痛苦、丧失与社会失序的形式,活在人们重建生活的努力里。一部把"国家"还原为身体经验与地方诗学的民族志。',
+  method:'历史人类学 + 文学性分析;记忆、暴力、地方(place)的诗学。',
+  dialogue:'为宏观的"国家—社会"争论补上微观的情感与记忆维度;与景军《神堂记忆》同属"创伤—记忆—地方"一脉。',
+  controversy:'文学化书写与社会科学解释之间的平衡,见仁见智。',
+  refs:[{c:'Mueggler, Erik. 2001. <i>The Age of Wild Ghosts: Memory, Violence, and Place in Southwest China</i>. Berkeley: University of California Press.',u:'https://www.ucpress.edu/book/9780520226333/the-age-of-wild-ghosts'}]},
+
+ {id:'jing',era:'reform',camp:'region',name:'景军',en:'Jun Jing',years:'The Temple of Memories · 1996',
+  lat:35.80,lng:103.30,zoom:8,acc:'#C08A4A',locale:'甘肃 · 黄河大川',motif:'water',
+  line:'移民、水坝与祭祖:村庄如何用记忆重建自身。',
+  thesis:'甘肃大川村 85% 村民姓孔、自认孔子后裔。毛时代他们因这身份饱受冲击,1960 年又为修水电站被强制移民、村庄沉入水库。改革后,他们靠重修孔氏祠堂、复兴祭祖,用"社会记忆"把破碎的村庄与历史重新缝合——记忆成为对抗遗忘与权力的资源。',
+  method:'历史人类学 / 社会记忆研究(承费孝通问题意识)。',
+  dialogue:'与科大卫"祠堂是建构"相呼应,但聚焦"创伤后如何重建";与 Mueggler 共构"记忆—地方"一脉,把宗族复兴放进国家暴力的余波里读。',
+  controversy:'单一村庄的深描,其结论的可推广性有限(作者本人亦坦承)。',
+  refs:[{c:'Jing, Jun. 1996. <i>The Temple of Memories: History, Power, and Morality in a Chinese Village</i>. Stanford, CA: Stanford University Press.',u:'https://www.sup.org/books/title/?id=2746'}]},
+
+ {id:'rowe',era:'jiajing',camp:'region',name:'罗威廉',en:'William T. Rowe',years:'Hankow · 1984',
+  lat:30.58,lng:114.27,zoom:8,acc:'#2E6E80',locale:'江汉 · 汉口',motif:'water',
+  line:'晚清汉口:被低估的城市活力与"市民社会"。',
+  thesis:'19 世纪的汉口是华中商业枢纽、百万人口的大城。罗威廉论证:晚期帝国的城市远比西方想象的更有活力——行会承担了许多本属市政府的职能,城市拥有自主的社会、经济与组织生命。这挑战了"中国没有市民社会/公共领域"的成见,把"传统中国=停滞"的图景翻转过来。',
+  method:'城市社会史;行会、商业、公共领域研究(两卷本)。',
+  dialogue:'与王笛的成都茶馆研究同属"中国城市公共领域"一脉;为"传统中国"提供了"商业—城市"而非"宗族—乡村"的另一面。',
+  controversy:'以哈贝马斯"公共领域"套中国城市是否贴切,曾引发长期争论。',
+  refs:[{c:'Rowe, William T. 1984. <i>Hankow: Commerce and Society in a Chinese City, 1796\u20131889</i>. Stanford, CA: Stanford University Press.',u:'https://www.sup.org/books/title/?id=1531'}]},
+
+ {id:'wangdi',era:'reform',camp:'region',name:'王笛',en:'Di Wang',years:'The Teahouse · 2008',
+  lat:30.66,lng:104.07,zoom:8,acc:'#6E8B4A',locale:'四川 · 成都茶馆',motif:'tea',
+  line:'一间茶馆里的微观史与"街头"公共生活。',
+  thesis:'成都的茶馆是小商业、日常文化与公共政治交汇的微观世界。王笛用"街头"与茶馆这种最普通的空间,写出底层民众的日常生活、社会交往与政治参与如何运作——一部"自下而上"的微观史,把宏大叙事还原为普通人的喝茶、闲谈、谋生与抗争。',
+  method:'微观史 / 新文化史;城市日常生活与公共空间研究。',
+  dialogue:'与罗威廉同证中国城市的公共生活;与萧凤霞、阎云翔共享"把普通人放回历史中心"的关怀。',
+  controversy:'微观史如何上接宏观结构,是这一路数的共同张力。',
+  refs:[{c:'Wang, Di. 2008. <i>The Teahouse: Small Business, Everyday Culture, and Public Politics in Chengdu, 1900\u20131950</i>. Stanford, CA: Stanford University Press.',u:'https://www.sup.org/books/title/?id=10199'}]},
+
+ {id:'xiang',era:'reform',camp:'region',name:'项飙',en:'Xiang Biao',years:'Transcending Boundaries · 浙江村',
+  lat:39.86,lng:116.38,zoom:9,acc:'#9E5B4A',locale:'北京 · 浙江村',motif:'roofline',
+  line:'天安门以南五公里的移民"非正式社会"。',
+  thesis:'距天安门仅五公里的"浙江村",十万温州移民在一次次国家清理中,自发组织起一个充满活力的服装产业与全国性商业网络——一个"超越官方边界"的非正式社会。它既挑战国家的治理框架,又展示了草根经济的韧性与自我组织能力。',
+  method:'长期参与式田野(1992–1998);流动人口与社会网络研究。',
+  dialogue:'把"国家—社会"搬到当代城市移民现场;与 Ong&Zhang 的"远程治理"对读——国家如何反复介入,社会如何反复重生。',
+  controversy:'"非正式社会"能否长期自治,在后续城市治理收紧中受到检验。',
+  refs:[{c:'Xiang, Biao. 2005. <i>Transcending Boundaries: Zhejiangcun, the Story of a Migrant Village in Beijing</i>. Translated by Jim Weldon. Leiden: Brill.',u:'https://brill.com/display/title/8605'}]},
+
+ {id:'zhao',era:'jiajing',camp:'region',name:'赵世瑜',en:'Zhao Shiyu',years:'《狂欢与日常》· 庙会',
+  lat:36.00,lng:111.70,zoom:7,acc:'#B5453C',locale:'山西 · 庙会与民间社会',motif:'roofline',
+  line:'庙会与水利:华北民间社会的自我组织。',
+  thesis:'明清以来的庙会,不只是"狂欢"的节庆,更是地方社会组织自身、协调水利、界定地域与认同的"日常"机制。赵世瑜把华南学派"进村找庙"的历史人类学方法带到华北与山西,证明"自下而上看国家"在北方同样有效——民间信仰与仪式,是理解基层社会秩序的钥匙。',
+  method:'历史人类学(华南学派的北方实践);庙会、水利、民间信仰与地域社会。',
+  dialogue:'把华南学派的取向"北伐"到山西华北,回应"华南经验能否推广";与陈春声、刘志伟共享"礼仪—地域社会"的问题意识。',
+  controversy:'华南模式移植北方时,宗族弱、信仰组织强的差异如何处理,仍在探索。',
+  refs:[{c:'赵世瑜. 2002. <i>狂欢与日常:明清以来的庙会与民间社会</i>. 北京:生活\u00b7读书\u00b7新知三联书店.',u:'https://search.worldcat.org/search?q=狂欢与日常+赵世瑜'}]},
+];
+
+/* ===================== geography annotations ===================== */
+const MTNS=[
+ ['喜马拉雅山脉',28.0,86.9],['昆仑山脉',36.0,85.0],['天山',42.6,84.0],['祁连山',38.4,99.0],
+ ['秦岭',33.8,107.6],['横断山脉',28.2,99.4],['太行山',37.4,113.7],['大兴安岭',50.2,122.6],
+ ['长白山',42.0,128.0],['南岭',25.2,112.0],['武夷山',27.3,117.6],['阴山',41.4,111.2],
+];
+const RIVS=[
+ ['长江',30.0,112.2],['黄河',35.6,110.6],['珠江',22.9,113.1],['雅鲁藏布江',29.2,90.4],
+ ['鄱阳湖',29.0,116.3],['洞庭湖',29.3,112.8],['青海湖',37.0,100.2],['太湖',31.2,120.2],
+];
+
+/* ===================== map ===================== */
+const map=L.map('map',{center:[33,100],zoom:3,minZoom:2,maxZoom:13,zoomControl:false,
+  worldCopyJump:true,attributionControl:true});
+L.control.zoom({position:'topright'}).addTo(map);
+
+const sat=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+  {maxZoom:13,attribution:'影像 &copy; Esri, Maxar, Earthstar Geographics'});
+const labels=L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}.png',
+  {maxZoom:13,subdomains:'abcd',attribution:'标注 &copy; CARTO'});
+const topo=L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',
+  {maxZoom:13,subdomains:'abc',attribution:'地形 &copy; OpenTopoMap (CC-BY-SA), &copy; OpenStreetMap'});
+sat.addTo(map); labels.addTo(map);
+
+/* province lines (fallback + admin reference) */
+const provLayer=L.geoJSON(CHINA,{style:{color:'#E0C088',weight:0.8,opacity:0.5,fill:false,
+  fillOpacity:0,lineJoin:'round'}}).addTo(map);
+
+/* ===================== annotations markers ===================== */
+const geoMarkers=[];
+function addGeo(arr,cls){ arr.forEach(([n,lat,lng])=>{
+  const m=L.marker([lat,lng],{icon:L.divIcon({className:'',html:`<div class="geo ${cls}">${n}</div>`,iconSize:[0,0]}),
+    interactive:false,keyboard:false}).addTo(map); geoMarkers.push(m); }); }
+addGeo(MTNS,'mtn'); addGeo(RIVS,'riv');
+
+/* ===================== scholar markers ===================== */
+const markers={};
+PINS.forEach(p=>{
+  const html=`<div class="mk ${p.camp}" data-id="${p.id}"><span class="mk-dot"></span><span class="mk-lbl">${p.name}</span></div>`;
+  const m=L.marker([p.lat,p.lng],{icon:L.divIcon({className:'',html,iconSize:[0,0]}),
+    riseOnHover:true,title:p.name});
+  m.bindTooltip(`<b>${p.name}</b><br>${p.line}`,{className:`tip ${p.camp}`,direction:'top',offset:[0,-10],opacity:1});
+  m.on('click',()=>selectPin(p));
+  m.addTo(map); markers[p.id]={m,p};
+});
+
+/* arrow for 萧凤霞 → Indian Ocean (decorative polyline) */
+const siuArrow=L.polyline([[22.52,113.39],[15,103],[6,88]],
+  {color:'#3E8C9A',weight:1.6,opacity:0.6,dashArray:'4 6'});
+
+/* ===================== labels / geo visibility by zoom ===================== */
+function syncZoom(){
+  const z=map.getZoom();
+  document.body.classList.toggle('labels-on', z>=5);
+  document.body.classList.toggle('geo-on', geoOn && z>=4 && z<=9);
+}
+map.on('zoomend',syncZoom);
+
+/* ===================== fly / select ===================== */
+let selId=null;
+function flyTo(lat,lng,z,dur){
+  if(reduce){ map.setView([lat,lng],z); return; }
+  map.flyTo([lat,lng],z,{duration:dur||1.6});
+}
+function offsetForPanel(){
+  const open=document.getElementById('panel').classList.contains('open');
+  if(!open) return;
+  if(window.innerWidth>760){ map.panBy([Math.min(225,window.innerWidth*0.21),0],{animate:true,duration:.5}); }
+  else { map.panBy([0,-window.innerHeight*0.22],{animate:true,duration:.5}); }
+}
+function selectPin(p){
+  selId=p.id; markHighlight();
+  flyTo(p.lat,p.lng,p.zoom||7);
+  openPanel(p);
+  map.once('moveend',offsetForPanel);
+}
+function markHighlight(){
+  Object.values(markers).forEach(({m,p})=>{
+    const el=m.getElement(); if(!el) return;
+    el.querySelector('.mk').classList.toggle('sel', p.id===selId);
+  });
+}
+
+/* ===================== panel ===================== */
+const panel=document.getElementById('panel');
+function block(h,inner){return `<div class="p-block"><div class="p-h">${h}</div>${inner}</div>`;}
+function campTitle(k){return {qin:'秦晖一脉',south:'华南学派',quant:'英文量化派',adj:'外围思想层',region:'区域民族志'}[k];}
+function openPanel(p){
+  const c=CAMPS[p.camp];
+  document.getElementById('pbanner').style.setProperty('--acc',p.acc||c.color);
+  document.getElementById('pmotif').innerHTML=motif(p.motif);
+  document.getElementById('plocale').textContent='◉ '+p.locale;
+  let h=`<div class="p-tag" style="color:${c.color}"><span class="d"></span>${c.label.split(' · ')[0]} · ${campTitle(p.camp)}</div>`;
+  h+=`<div class="p-en">${p.en}</div><h2>${p.name}</h2><div class="p-years" style="--acc:${p.acc||c.color}">${p.years}</div>`;
+  h+=`<p class="p-thesis" style="--acc:${p.acc||c.color}">${p.thesis}</p>`;
+  h+=block('一句话 / In a line', `<p>${p.line}</p>`);
+  h+=block('方法 / Method', `<p>${p.method}</p>`);
+  h+=block('对话 / In dialogue', `<p>${p.dialogue}</p>`);
+  if(p.controversy) h+=block('争议 / Contested', `<p>${p.controversy}</p>`);
+  h+=`<div class="p-block"><div class="p-h">参考文献 / References &nbsp;<span style="font-family:var(--mono);letter-spacing:0;text-transform:none">AJS style</span></div><ul class="p-refs">${p.refs.map(r=>{
+      const u=r.u||''; const tag=u.includes('doi.org')?'DOI':(u.includes('worldcat')?'书目':(u?'出版社':''));
+      return u ? `<li><a href="${u}" target="_blank" rel="noopener">${r.c}<span class="ext">${tag}↗</span></a></li>` : `<li>${r.c}</li>`;
+    }).join('')}</ul></div>`;
+  document.getElementById('pinner').innerHTML=h;
+  // 萧凤霞 arrow
+  if(p.id==='siu'){ siuArrow.addTo(map);} else { map.removeLayer(siuArrow); }
+  panel.classList.add('open');
+  panel.scrollTop=0;
+}
+function closePanel(){ panel.classList.remove('open'); selId=null; markHighlight(); map.removeLayer(siuArrow); }
+document.getElementById('pclose').onclick=closePanel;
+
+/* ===================== thesis chips ===================== */
+let activeCamp=null;
+const chips=document.getElementById('chips');
+Object.entries(CAMPS).forEach(([k,c])=>{
+  const b=document.createElement('button');
+  b.className='chip'; b.setAttribute('aria-pressed','false'); b.dataset.camp=k; b.style.color=c.color;
+  b.innerHTML=`<span class="d" style="background:${c.color}"></span><span style="color:var(--text)">${c.label.split(' · ')[0]}</span>`;
+  b.onclick=()=>toggleCamp(k);
+  chips.appendChild(b);
+});
+function toggleCamp(k){
+  if(tlMode){ /* leaving timeline when using camp filter */ tlMode=false;
+    document.body.classList.remove('tl-mode'); document.getElementById('timeline').classList.remove('show');
+    document.getElementById('tlBtn').setAttribute('aria-pressed','false'); clearEra(); }
+  activeCamp=(activeCamp===k)?null:k;
+  chips.querySelectorAll('.chip').forEach(ch=>ch.setAttribute('aria-pressed', ch.dataset.camp===activeCamp?'true':'false'));
+  Object.values(markers).forEach(({m,p})=>{
+    const show=!activeCamp || p.camp===activeCamp;
+    const el=m.getElement(); if(el) el.querySelector('.mk').classList.toggle('hidden',!show);
+  });
+  const cap=document.getElementById('cap');
+  if(activeCamp){ cap.style.color=CAMPS[k].color; cap.textContent=CAMPS[k].q; cap.classList.add('show'); }
+  else cap.classList.remove('show');
+}
+
+/* ===================== basemap & layer toggles ===================== */
+let geoOn=true;
+const bSat=document.getElementById('bSat'), bTopo=document.getElementById('bTopo');
+function setBase(which){
+  if(which==='sat'){ if(!map.hasLayer(sat)){map.addLayer(sat);} if(!map.hasLayer(labels)){map.addLayer(labels);} map.removeLayer(topo);
+    bSat.setAttribute('aria-pressed','true'); bTopo.setAttribute('aria-pressed','false'); }
+  else { if(!map.hasLayer(topo)){map.addLayer(topo);} map.removeLayer(sat); map.removeLayer(labels);
+    bSat.setAttribute('aria-pressed','false'); bTopo.setAttribute('aria-pressed','true'); }
+  provLayer.bringToFront();
+  bumpMarkers();
+}
+bSat.onclick=()=>setBase('sat'); bTopo.onclick=()=>setBase('topo');
+function bumpMarkers(){ /* ensure markers/labels stay above re-added tiles */ }
+
+const tProv=document.getElementById('tProv'), tGeo=document.getElementById('tGeo');
+tProv.onclick=()=>{ const on=tProv.getAttribute('aria-pressed')!=='true'; tProv.setAttribute('aria-pressed',on?'true':'false');
+  if(on){ provLayer.addTo(map); provLayer.bringToFront(); } else { map.removeLayer(provLayer);} };
+tGeo.onclick=()=>{ geoOn=!geoOn; tGeo.setAttribute('aria-pressed',geoOn?'true':'false');
+  geoMarkers.forEach(m=>{ if(geoOn) m.addTo(map); else map.removeLayer(m); }); syncZoom(); };
+
+/* ===================== controls ===================== */
+document.getElementById('toChina').onclick=()=>{ closePanel(); flyTo(35.5,103,4,1.6); };
+document.getElementById('helpbtn').onclick=()=>document.getElementById('help').classList.add('show');
+document.getElementById('helpclose').onclick=()=>document.getElementById('help').classList.remove('show');
+document.getElementById('help').addEventListener('click',e=>{ if(e.target.id==='help') document.getElementById('help').classList.remove('show'); });
+
+/* legend in help */
+const lg=document.getElementById('legend');
+Object.values(CAMPS).forEach(c=>{ const d=document.createElement('div'); d.className='lg';
+  d.innerHTML=`<span class="d" style="background:${c.color}"></span>${c.label}`; lg.appendChild(d); });
+
+/* ===================== timeline ===================== */
+const ERAS=[
+  {key:'zhouqin', year:'前221', title:'周秦之变', view:[34.3,108.95,5],
+   blurb:'郡县制 · 编户齐民 · 大一统国家成形——也是有人被"编入"、有人逃进山的起点。'},
+  {key:'tangsong', year:'618–1127', title:'唐宋变革', view:[34.2,110,6],
+   blurb:'科举兴、门第衰;精英网络从"星形"塌缩为"领结",社会流动性上升。'},
+  {key:'jiajing', year:'1520s', title:'嘉靖大礼议', view:[24,113,7],
+   blurb:'礼制松动,庶民得以建祠追祖——"做宗族"成为地方接入帝国正统的方式。'},
+  {key:'reform', year:'1978–', title:'改革开放', view:[34,112,4],
+   blurb:'国家后撤、个体化、移民与市场;宗族、记忆与非正式社会在当代重新浮现。'},
+];
+let tlMode=false, tlActive=null;
+const tlNodes=document.getElementById('tlNodes'), tlFill=document.getElementById('tlFill');
+ERAS.forEach((e,i)=>{
+  const left=4 + (i/(ERAS.length-1))*92;
+  const node=document.createElement('div');
+  node.className='tl-node'; node.style.left=left+'%'; node.tabIndex=0; node.setAttribute('role','button');
+  node.setAttribute('aria-label',e.title+' '+e.year);
+  node.innerHTML=`<span class="nub"></span><span class="yr">${e.year}</span><span class="nm">${e.title}</span>`;
+  node.onclick=()=>setEra(e.key);
+  node.onkeydown=(ev)=>{ if(ev.key==='Enter'||ev.key===' '){ev.preventDefault();setEra(e.key);} };
+  tlNodes.appendChild(node); e._node=node; e._left=left;
+});
+function setEra(key){
+  tlActive=key; const e=ERAS.find(x=>x.key===key);
+  ERAS.forEach(x=>x._node.classList.toggle('active',x.key===key));
+  tlFill.style.width=(e._left-4)+'%';
+  // light up matching pins, dim others
+  Object.values(markers).forEach(({m,p})=>{
+    const el=m.getElement(); if(!el) return; const mk=el.querySelector('.mk');
+    const hit=p.era===key;
+    mk.classList.toggle('lit',hit); mk.classList.toggle('dim',!hit);
+  });
+  // caption + fly
+  const cap=document.getElementById('cap');
+  cap.style.color='var(--gold)'; cap.innerHTML=`<b style="font-family:var(--serif)">${e.title} · ${e.year}</b> &nbsp;${e.blurb}`;
+  cap.classList.add('show');
+  flyTo(e.view[0],e.view[1],e.view[2],1.8);
+}
+function clearEra(){
+  tlActive=null; ERAS.forEach(x=>x._node.classList.remove('active')); tlFill.style.width='0';
+  Object.values(markers).forEach(({m})=>{ const el=m.getElement(); if(!el)return;
+    const mk=el.querySelector('.mk'); mk.classList.remove('lit','dim'); });
+  document.getElementById('cap').classList.remove('show');
+}
+document.getElementById('tlAll').onclick=clearEra;
+function toggleTimeline(){
+  tlMode=!tlMode;
+  document.body.classList.toggle('tl-mode',tlMode);
+  document.getElementById('timeline').classList.toggle('show',tlMode);
+  document.getElementById('tlBtn').setAttribute('aria-pressed',tlMode?'true':'false');
+  if(tlMode){
+    // turn off camp filter to avoid conflict
+    if(activeCamp){ toggleCamp(activeCamp); }
+    setEra('zhouqin');
+  } else {
+    clearEra();
+  }
+}
+document.getElementById('tlBtn').onclick=toggleTimeline;
+
+/* ===================== enter ===================== */
+function enter(){
+  document.getElementById('hero').classList.add('gone');
+  document.getElementById('topbar').classList.add('show');
+  setTimeout(()=>flyTo(35.5,103,4,2.6), reduce?0:200);
+}
+document.getElementById('enterbtn').onclick=enter;
+
+/* init */
+syncZoom();
+</script>
+</body>
+</html>

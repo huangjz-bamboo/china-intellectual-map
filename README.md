@@ -1,6 +1,19 @@
 # 中国学术地图
 
-这是一个单文件静态网页地图项目，入口文件为 `index.html`，适合直接通过 GitHub Pages 发布。
+这是一个静态网页地图项目，入口文件为 `index.html`，通过 GitHub Pages 发布。
+
+当前线上地址：
+
+```text
+https://huangjz-bamboo.github.io/china-intellectual-map/
+```
+
+## 版本文件
+
+- `index.html`: 当前公网入口，使用 `files/china-intellectual-map-offline.html` 的离线版内容。
+- `china-intellectual-map.html`: 初始版本备份。
+- `files/china-intellectual-map-offline.html`: 2026-06-10 新增离线版。
+- `files/china-intellectual-map-satellite.html`: 2026-06-10 新增卫星版。
 
 ## 本地预览
 
