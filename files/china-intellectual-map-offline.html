@@ -718,6 +718,11 @@ svg.leaflet-image-layer.leaflet-interactive path {
     text-shadow:0 0 3px #000,0 1px 4px #000;letter-spacing:.05em}
   .geo.mtn::before{content:"▲";font-style:normal;font-size:8px;margin-right:4px;color:#cdb07e;vertical-align:1px}
   .geo.riv{font-family:var(--serif);font-size:11.5px;font-style:italic;color:#9fd2e0;text-shadow:0 0 3px #000,0 1px 4px #000}
+  .prov-name{transform:translate(-50%,-50%);pointer-events:none;white-space:nowrap;
+    font-family:var(--serif);font-size:13px;font-weight:600;color:#f2dfb4;letter-spacing:.08em;
+    text-shadow:0 0 4px #000,0 1px 5px #000,0 0 10px rgba(0,0,0,.75);
+    opacity:.92}
+  body.prov-labels-off .prov-name{opacity:0}
 
   .tip{background:rgba(10,15,26,.95)!important;border:1px solid var(--faint)!important;color:var(--text)!important;
     border-radius:5px!important;box-shadow:0 8px 26px rgba(0,0,0,.55)!important;font-family:var(--sans);padding:8px 11px!important;max-width:230px}
@@ -1206,15 +1211,23 @@ L.control.zoom({position:'topright'}).addTo(map);
 
 const sat=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
   {maxZoom:13,attribution:'影像 &copy; Esri, Maxar, Earthstar Geographics'});
-const labels=L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}.png',
-  {maxZoom:13,subdomains:'abcd',attribution:'标注 &copy; CARTO'});
 const topo=L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',
   {maxZoom:13,subdomains:'abc',attribution:'地形 &copy; OpenTopoMap (CC-BY-SA), &copy; OpenStreetMap'});
-sat.addTo(map); labels.addTo(map);
+sat.addTo(map);
 
 /* province lines (fallback + admin reference) */
 const provLayer=L.geoJSON(CHINA,{style:{color:'#E0C088',weight:0.8,opacity:0.5,fill:false,
   fillOpacity:0,lineJoin:'round'}}).addTo(map);
+const provNameMarkers=[];
+CHINA.features.forEach(f=>{
+  const [lng,lat]=f.properties.cp;
+  const m=L.marker([lat,lng],{icon:L.divIcon({
+    className:'',
+    html:`<div class="prov-name">${f.properties.n}</div>`,
+    iconSize:[0,0]
+  }),interactive:false,keyboard:false}).addTo(map);
+  provNameMarkers.push(m);
+});
 
 /* ===================== annotations markers ===================== */
 const geoMarkers=[];
@@ -1329,9 +1342,9 @@ function toggleCamp(k){
 let geoOn=true;
 const bSat=document.getElementById('bSat'), bTopo=document.getElementById('bTopo');
 function setBase(which){
-  if(which==='sat'){ if(!map.hasLayer(sat)){map.addLayer(sat);} if(!map.hasLayer(labels)){map.addLayer(labels);} map.removeLayer(topo);
+  if(which==='sat'){ if(!map.hasLayer(sat)){map.addLayer(sat);} map.removeLayer(topo);
     bSat.setAttribute('aria-pressed','true'); bTopo.setAttribute('aria-pressed','false'); }
-  else { if(!map.hasLayer(topo)){map.addLayer(topo);} map.removeLayer(sat); map.removeLayer(labels);
+  else { if(!map.hasLayer(topo)){map.addLayer(topo);} map.removeLayer(sat);
     bSat.setAttribute('aria-pressed','false'); bTopo.setAttribute('aria-pressed','true'); }
   provLayer.bringToFront();
   bumpMarkers();
@@ -1341,7 +1354,9 @@ function bumpMarkers(){ /* ensure markers/labels stay above re-added tiles */ }
 
 const tProv=document.getElementById('tProv'), tGeo=document.getElementById('tGeo');
 tProv.onclick=()=>{ const on=tProv.getAttribute('aria-pressed')!=='true'; tProv.setAttribute('aria-pressed',on?'true':'false');
-  if(on){ provLayer.addTo(map); provLayer.bringToFront(); } else { map.removeLayer(provLayer);} };
+  document.body.classList.toggle('prov-labels-off',!on);
+  if(on){ provLayer.addTo(map); provNameMarkers.forEach(m=>m.addTo(map)); provLayer.bringToFront(); }
+  else { map.removeLayer(provLayer); provNameMarkers.forEach(m=>map.removeLayer(m)); } };
 tGeo.onclick=()=>{ geoOn=!geoOn; tGeo.setAttribute('aria-pressed',geoOn?'true':'false');
   geoMarkers.forEach(m=>{ if(geoOn) m.addTo(map); else map.removeLayer(m); }); syncZoom(); };
 
