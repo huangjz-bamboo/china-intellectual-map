@@ -697,16 +697,19 @@ svg.leaflet-image-layer.leaflet-interactive path {
   .leaflet-bar a:hover{background:#1a2335}
 
   /* ---- scholar markers ---- */
-  .mk{transform:translate(-50%,-50%);display:flex;align-items:center;gap:6px;cursor:pointer;white-space:nowrap;position:relative}
+  .mk{transform:translate(-50%,-50%);display:flex;align-items:center;gap:6px;white-space:nowrap;position:relative;pointer-events:none}
   .mk-dot{width:13px;height:13px;border-radius:50%;border:2px solid #0a0f17;flex:none;
-    box-shadow:0 0 0 0 currentColor;transition:transform .2s, box-shadow .3s}
+    box-shadow:0 0 0 0 currentColor;transition:transform .2s, box-shadow .3s;pointer-events:none}
   .mk:hover .mk-dot{transform:scale(1.3)}
   .mk.sel .mk-dot{box-shadow:0 0 0 5px rgba(255,255,255,.18),0 0 14px currentColor}
-  .mk-lbl{position:absolute;left:18px;top:50%;font-size:15px;font-weight:750;line-height:1.08;color:#fff;
+  .mk-lbl{position:absolute;left:18px;top:50%;font-size:16px;font-weight:780;line-height:1.08;color:#fff;
     letter-spacing:0;text-shadow:0 0 5px #000,0 0 8px #000,0 1px 4px #000,0 0 12px currentColor;
+    padding:4px 6px;border-radius:4px;background:rgba(7,10,18,.18);
     opacity:0;transform:translate(calc(var(--lbl-x,0px) - 6px),calc(-50% + var(--lbl-y,0px)));
-    transition:opacity .25s, transform .25s;pointer-events:none}
-  body.labels-on .mk-lbl{opacity:1;transform:translate(var(--lbl-x,0px),calc(-50% + var(--lbl-y,0px)))}
+    transition:opacity .25s, transform .25s, background .2s, color .2s;pointer-events:none}
+  body.labels-on .mk-lbl{opacity:1;transform:translate(var(--lbl-x,0px),calc(-50% + var(--lbl-y,0px)));pointer-events:auto;cursor:pointer}
+  body.labels-on .mk-lbl:hover,body.labels-on .mk-lbl:focus-visible{background:rgba(7,10,18,.72);outline:1px solid currentColor;outline-offset:2px}
+  .mk.sel .mk-lbl{background:rgba(216,176,112,.16);color:var(--gold)}
   .mk.qin .mk-dot{background:var(--qin);color:var(--qin)}
   .mk.south .mk-dot{background:var(--south);color:var(--south)}
   .mk.quant .mk-dot{background:var(--quant);color:var(--quant)}
@@ -875,8 +878,9 @@ svg.leaflet-image-layer.leaflet-interactive path {
   .tl-node .nub::after{content:"";position:absolute;top:3px;width:5px;height:5px;border-radius:50%;background:transparent}
   .tl-node .yr{font-family:var(--mono);font-size:9.5px;color:var(--dim);margin-top:6px;white-space:nowrap;letter-spacing:.04em}
   .tl-node .nm{font-family:var(--serif);font-size:12px;color:var(--text);margin-top:2px;white-space:nowrap;text-shadow:0 1px 4px #000}
+  .tl-node .ct{font-family:var(--mono);font-size:9px;color:var(--dim);margin-top:1px;white-space:nowrap}
   .tl-node.active .nub{background:var(--gold);border-color:var(--gold);box-shadow:0 0 0 4px rgba(216,176,112,.2),0 0 14px var(--gold)}
-  .tl-node.active .yr,.tl-node.active .nm{color:var(--gold)}
+  .tl-node.active .yr,.tl-node.active .nm,.tl-node.active .ct{color:var(--gold)}
   .tl-node:hover .nub{border-color:var(--gold)}
   .tl-node:focus-visible{outline:none} .tl-node:focus-visible .nub{outline:2px solid var(--gold);outline-offset:2px}
   .tl-allbtn{position:absolute;right:0;top:-2px;pointer-events:auto}
@@ -885,18 +889,42 @@ svg.leaflet-image-layer.leaflet-interactive path {
   body.tl-mode .mk.lit .mk-dot{box-shadow:0 0 0 4px rgba(255,255,255,.15),0 0 16px currentColor;animation:litpulse 1.8s ease-in-out infinite}
   @keyframes litpulse{0%,100%{box-shadow:0 0 0 3px rgba(255,255,255,.12),0 0 10px currentColor}50%{box-shadow:0 0 0 6px rgba(255,255,255,.05),0 0 20px currentColor}}
 
+  @media (max-width:900px){
+    #topbar{align-items:flex-start;padding-top:10px}
+    #topbar .ttl{width:100%;font-size:12.5px}
+    .chips{width:100%;flex-wrap:nowrap;overflow-x:auto;padding-bottom:3px;scrollbar-width:none}
+    .chips::-webkit-scrollbar{display:none}
+    .chip{flex:0 0 auto;padding:7px 10px}
+    #cap{top:92px;max-width:calc(100vw - 24px)}
+    #panel{width:min(430px,48vw)}
+  }
   @media (max-width:760px){
-    #timeline{bottom:118px}
+    #timeline{bottom:calc(106px + env(safe-area-inset-bottom));padding:0 10px}
     .tl-node .nm{display:none}
-    .tl-track{height:44px}
-    #panel{width:100%;height:66%;top:auto;bottom:0;border-left:none;border-top:1px solid var(--faint);
+    .tl-node .ct{font-size:8.5px}
+    .tl-track{height:46px;max-width:100%}
+    .tl-allbtn{right:0;top:28px;padding:6px 9px}
+    #panel{width:100%;height:72dvh;top:auto;bottom:0;border-left:none;border-top:1px solid var(--faint);
       transform:translateY(103%);border-radius:14px 14px 0 0}
     #panel.open{transform:translateY(0)}
     #panel h2{font-size:22px}
-    #topbar .ttl{font-size:12.5px}
-    #hud{flex-direction:column;align-items:stretch}
-    #hud .grp{order:2;justify-content:center} #hud .grp.r{order:1}
-    #cap{top:auto;bottom:118px;font-size:12.5px}
+    .p-inner{padding:18px 18px 84px}
+    .p-banner{height:96px}
+    .p-thesis{font-size:15px;line-height:1.58}
+    #hud{flex-direction:column;align-items:stretch;padding-bottom:calc(14px + env(safe-area-inset-bottom))}
+    #hud .grp{order:2;justify-content:center;gap:6px} #hud .grp.r{order:1}
+    .ctl{padding:8px 10px;font-size:11.5px}
+    #cap{top:auto;bottom:calc(114px + env(safe-area-inset-bottom));font-size:12.5px;line-height:1.5}
+    #hero{justify-content:flex-start;padding:72px 18px 24px;overflow:auto}
+    #hero h1{font-size:34px;max-width:11em}
+    #hero .lede{font-size:14.5px;line-height:1.62}
+    .mk-lbl{font-size:14px;padding:4px 5px}
+  }
+  @media (max-width:420px){
+    #topbar{padding-left:10px;padding-right:10px}
+    .chip{font-size:11.5px}
+    .seg .ctl,.ctl{padding-left:8px;padding-right:8px}
+    #panel{height:76dvh}
   }
   @media (prefers-reduced-motion:reduce){ *{transition-duration:.001ms!important} }
 </style>
@@ -1420,25 +1448,56 @@ addGeo(MTNS,'mtn'); addGeo(RIVS,'riv');
 
 /* ===================== scholar markers ===================== */
 const markers={};
-const LABEL_OFFSETS={
-  qinhui:[12,-18], yuhuawang:[12,10], pnas:[12,36],
-  faure:[12,-24], liu:[12,0], siu:[12,24],
-  peng:[12,-30], duara:[12,-8], lutao:[12,14], rice:[12,38],
-  scott:[12,-28], ong:[12,-6], mueggler:[12,18],
-  jing:[12,-14], zhao:[12,14],
-  fairbank:[14,-80], pye:[14,-56], nathan:[14,-32], xieyu:[14,-8], whyte:[14,16], repnikova:[14,40], xiang:[14,64],
-  feixiaotong:[14,-36], kuhn:[14,-14], pomeranz:[14,8], perry:[14,30], ddavis:[14,52],
-  elvin:[14,-36], rbwong:[14,-14], skinner:[14,-28], walder:[14,10],
-  shue:[14,-18], solinger:[14,8], obrienli:[14,28]
+const BASE_LABEL_OFFSETS={
+  qinhui:[22,-22], yuhuawang:[22,10], pnas:[22,36],
+  scott:[22,-28], ong:[22,-6], mueggler:[22,18],
+  jing:[22,-14], zhao:[22,14], shue:[22,-18], solinger:[22,8], obrienli:[22,28]
 };
+const CLOUD_OFFSETS=[
+  [26,-78],[92,-48],[104,4],[56,58],[-76,42],[-92,-18],
+  [-34,-66],[126,42],[-118,74],[134,-84],[-138,-52],[18,88]
+];
+function labelClusterKey(p){
+  return `${Math.round(p.lat*10)/10},${Math.round(p.lng*10)/10}`;
+}
+function computeLabelOffsets(pins){
+  const offsets={...BASE_LABEL_OFFSETS};
+  const groups=new Map();
+  pins.forEach(p=>{
+    const key=labelClusterKey(p);
+    if(!groups.has(key)) groups.set(key,[]);
+    groups.get(key).push(p);
+  });
+  groups.forEach(group=>{
+    if(group.length<2) return;
+    group.forEach((p,i)=>{
+      const pos=CLOUD_OFFSETS[i%CLOUD_OFFSETS.length];
+      const ring=Math.floor(i/CLOUD_OFFSETS.length);
+      offsets[p.id]=[pos[0]+ring*24, pos[1]+ring*18];
+    });
+  });
+  return offsets;
+}
+const LABEL_OFFSETS=computeLabelOffsets(PINS);
+function bindNameButton(m,p){
+  const el=m.getElement(); if(!el) return;
+  const label=el.querySelector('.mk-lbl'); if(!label || label.dataset.bound) return;
+  label.dataset.bound='true';
+  label.setAttribute('role','button');
+  label.setAttribute('tabindex','0');
+  label.setAttribute('aria-label',`打开${p.name}详情`);
+  label.addEventListener('click',ev=>{ ev.preventDefault(); ev.stopPropagation(); selectPin(p); });
+  label.addEventListener('keydown',ev=>{
+    if(ev.key==='Enter'||ev.key===' '){ ev.preventDefault(); ev.stopPropagation(); selectPin(p); }
+  });
+}
 PINS.forEach(p=>{
   const [lx,ly]=LABEL_OFFSETS[p.id]||[12,0];
   const html=`<div class="mk ${p.camp}" data-id="${p.id}" style="--lbl-x:${lx}px;--lbl-y:${ly}px"><span class="mk-dot"></span><span class="mk-lbl">${p.name}</span></div>`;
   const m=L.marker([p.lat,p.lng],{icon:L.divIcon({className:'',html,iconSize:[0,0]}),
     riseOnHover:true,title:p.name});
   m.bindTooltip(`<b>${p.name}</b><br>${p.line}`,{className:`tip ${p.camp}`,direction:'top',offset:[0,-10],opacity:1});
-  m.on('click',()=>selectPin(p));
-  m.addTo(map); markers[p.id]={m,p};
+  m.addTo(map); bindNameButton(m,p); markers[p.id]={m,p};
 });
 
 /* arrow for 萧凤霞 → Indian Ocean (decorative polyline) */
@@ -1448,10 +1507,11 @@ const siuArrow=L.polyline([[22.52,113.39],[15,103],[6,88]],
 /* ===================== labels / geo visibility by zoom ===================== */
 function syncZoom(){
   const z=map.getZoom();
-  document.body.classList.toggle('labels-on', z>=5);
+  const labelMin=window.innerWidth<=760 ? 5 : 4;
+  document.body.classList.toggle('labels-on', z>=labelMin);
   document.body.classList.toggle('geo-on', geoOn && z>=4 && z<=9);
 }
-map.on('zoomend',syncZoom);
+map.on('zoomend resize',syncZoom);
 
 /* ===================== fly / select ===================== */
 let selId=null;
@@ -1482,22 +1542,24 @@ function markHighlight(){
 const panel=document.getElementById('panel');
 function block(h,inner){return `<div class="p-block"><div class="p-h">${h}</div>${inner}</div>`;}
 function campTitle(k){return {qin:'秦晖一脉',south:'华南学派',quant:'英文量化派',adj:'外围思想层',region:'区域民族志',hist:'历史学',soc:'社会学',pol:'政治学'}[k];}
+function field(v,fallback='待补充'){ return v || fallback; }
 function openPanel(p){
   const c=CAMPS[p.camp];
   document.getElementById('pbanner').style.setProperty('--acc',p.acc||c.color);
   document.getElementById('pmotif').innerHTML=motif(p.motif);
-  document.getElementById('plocale').textContent='◉ '+p.locale;
+  document.getElementById('plocale').textContent='◉ '+field(p.locale,'地点待补充');
   let h=`<div class="p-tag" style="color:${c.color}"><span class="d"></span>${c.label.split(' · ')[0]} · ${campTitle(p.camp)}</div>`;
-  h+=`<div class="p-en">${p.en}</div><h2>${p.name}</h2><div class="p-years" style="--acc:${p.acc||c.color}">${p.years}</div>`;
-  h+=`<p class="p-thesis" style="--acc:${p.acc||c.color}">${p.thesis}</p>`;
-  h+=block('一句话 / In a line', `<p>${p.line}</p>`);
-  h+=block('方法 / Method', `<p>${p.method}</p>`);
-  h+=block('对话 / In dialogue', `<p>${p.dialogue}</p>`);
+  h+=`<div class="p-en">${field(p.en,'')}</div><h2>${p.name}</h2><div class="p-years" style="--acc:${p.acc||c.color}">${field(p.years)}</div>`;
+  h+=`<p class="p-thesis" style="--acc:${p.acc||c.color}">${field(p.thesis)}</p>`;
+  h+=block('一句话 / In a line', `<p>${field(p.line)}</p>`);
+  h+=block('方法 / Method', `<p>${field(p.method)}</p>`);
+  h+=block('对话 / In dialogue', `<p>${field(p.dialogue)}</p>`);
   if(p.controversy) h+=block('争议 / Contested', `<p>${p.controversy}</p>`);
-  h+=`<div class="p-block"><div class="p-h">参考文献 / References &nbsp;<span style="font-family:var(--mono);letter-spacing:0;text-transform:none">AJS style</span></div><ul class="p-refs">${p.refs.map(r=>{
+  const refs=Array.isArray(p.refs)?p.refs:[];
+  h+=`<div class="p-block"><div class="p-h">参考文献 / References &nbsp;<span style="font-family:var(--mono);letter-spacing:0;text-transform:none">AJS style</span></div><ul class="p-refs">${refs.length?refs.map(r=>{
       const u=r.u||''; const tag=u.includes('doi.org')?'DOI':(u.includes('worldcat')?'书目':(u?'出版社':''));
       return u ? `<li><a href="${u}" target="_blank" rel="noopener">${r.c}<span class="ext">${tag}↗</span></a></li>` : `<li>${r.c}</li>`;
-    }).join('')}</ul></div>`;
+    }).join(''):'<li>参考文献待补充。</li>'}</ul></div>`;
   document.getElementById('pinner').innerHTML=h;
   // 萧凤霞 arrow
   if(p.id==='siu'){ siuArrow.addTo(map);} else { map.removeLayer(siuArrow); }
@@ -1569,33 +1631,52 @@ Object.values(CAMPS).forEach(c=>{ const d=document.createElement('div'); d.class
 const ERAS=[
   {key:'zhouqin', year:'前221', title:'周秦之变', view:[34.3,108.95,5],
    blurb:'郡县制 · 编户齐民 · 大一统国家成形——也是有人被"编入"、有人逃进山的起点。'},
-  {key:'tangsong', year:'618–1127', title:'唐宋变革', view:[34.2,110,6],
-   blurb:'科举兴、门第衰;精英网络从"星形"塌缩为"领结",社会流动性上升。'},
-  {key:'jiajing', year:'1520s', title:'嘉靖大礼议', view:[24,113,7],
-   blurb:'礼制松动,庶民得以建祠追祖——"做宗族"成为地方接入帝国正统的方式。'},
-  {key:'reform', year:'1978–', title:'改革开放', view:[34,112,4],
-   blurb:'国家后撤、个体化、移民与市场;宗族、记忆与非正式社会在当代重新浮现。'},
+  {key:'tangsong', year:'618–1279', title:'唐宋变革', view:[34.2,110,6],
+   blurb:'科举兴、门第衰、市场扩展与区域系统成形,社会流动和地方秩序被重新组织。'},
+  {key:'jiajing', year:'1368–1840', title:'明清地方社会', view:[28.5,114,6],
+   blurb:'宗族、礼仪、庙会、市场与地方权力网络,共同塑造帝国晚期的基层社会。'},
+  {key:'lateqing', year:'1840–1911', title:'晚清与近代', view:[34,116,5],
+   blurb:'条约体系、外交危机、地方恐慌与近代国家转型,把中国带入全球秩序的压力场。'},
+  {key:'socialist', year:'1949–1978', title:'社会主义制度', view:[35,113,5],
+   blurb:'单位制、集体化、组织化依附和基层国家能力,构成理解改革前社会结构的关键。'},
+  {key:'reform', year:'1978–2012', title:'改革开放', view:[34,112,4],
+   blurb:'国家后撤、市场转型、城市化、流动人口、消费社会与乡村维权共同展开。'},
+  {key:'contemporary', year:'2012–', title:'当代治理', view:[35.5,109,4],
+   blurb:'威权韧性、媒体治理、数字化控制、社会分层与国家能力,成为当代中国研究的新重心。'},
 ];
 let tlMode=false, tlActive=null;
 const tlNodes=document.getElementById('tlNodes'), tlFill=document.getElementById('tlFill');
+const TIMELINE_TAGS={
+  qinhui:['zhouqin'], rice:['zhouqin','tangsong'], scott:['zhouqin'],
+  yuhuawang:['tangsong'], pnas:['tangsong'], skinner:['tangsong','jiajing'], pomeranz:['tangsong','jiajing'], rbwong:['tangsong','jiajing'], elvin:['tangsong','jiajing'],
+  faure:['jiajing'], liu:['jiajing'], zheng:['jiajing'], rowe:['jiajing'], zhao:['jiajing'], kuhn:['jiajing','lateqing'],
+  fairbank:['lateqing'], duara:['lateqing'], perry:['lateqing','socialist'],
+  walder:['socialist'], feixiaotong:['jiajing','reform'],
+  siu:['reform'], peng:['reform'], lutao:['reform'], yan:['reform'], ong:['reform'], clark:['reform'], mueggler:['reform'], jing:['reform'], wangdi:['reform'], xiang:['reform'],
+  xieyu:['reform','contemporary'], solinger:['reform'], ddavis:['reform'], whyte:['reform','contemporary'], shue:['reform','contemporary'], obrienli:['reform','contemporary'],
+  pye:['reform'], nathan:['reform','contemporary'], repnikova:['contemporary']
+};
+function eraKeys(p){ return TIMELINE_TAGS[p.id] || [p.era]; }
 ERAS.forEach((e,i)=>{
   const left=4 + (i/(ERAS.length-1))*92;
+  const count=PINS.filter(p=>eraKeys(p).includes(e.key)).length;
   const node=document.createElement('div');
   node.className='tl-node'; node.style.left=left+'%'; node.tabIndex=0; node.setAttribute('role','button');
-  node.setAttribute('aria-label',e.title+' '+e.year);
-  node.innerHTML=`<span class="nub"></span><span class="yr">${e.year}</span><span class="nm">${e.title}</span>`;
+  node.setAttribute('aria-label',`${e.title} ${e.year}, ${count} 个节点`);
+  node.innerHTML=`<span class="nub"></span><span class="yr">${e.year}</span><span class="nm">${e.title}</span><span class="ct">${count} 节点</span>`;
   node.onclick=()=>setEra(e.key);
   node.onkeydown=(ev)=>{ if(ev.key==='Enter'||ev.key===' '){ev.preventDefault();setEra(e.key);} };
   tlNodes.appendChild(node); e._node=node; e._left=left;
 });
 function setEra(key){
   tlActive=key; const e=ERAS.find(x=>x.key===key);
+  if(!e) return;
   ERAS.forEach(x=>x._node.classList.toggle('active',x.key===key));
   tlFill.style.width=(e._left-4)+'%';
   // light up matching pins, dim others
   Object.values(markers).forEach(({m,p})=>{
     const el=m.getElement(); if(!el) return; const mk=el.querySelector('.mk');
-    const hit=p.era===key;
+    const hit=eraKeys(p).includes(key);
     mk.classList.toggle('lit',hit); mk.classList.toggle('dim',!hit);
   });
   // caption + fly
